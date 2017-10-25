@@ -1,4 +1,4 @@
-# PPS 2017 - Escape
+# PPS - The New York Sock Exchange
 ## Usage
 You need a java environment installed.
 First compile the simulator:
