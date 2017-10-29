@@ -20,6 +20,8 @@ public class Player extends exchange.sim.Player {
     private int id1, id2, id;
     private double maxDistance, minDistance;
     private Sock[] socks;
+    private double[][] centers;
+    private int[] clusters;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
@@ -33,6 +35,9 @@ public class Player extends exchange.sim.Player {
 			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		*/
+        centers = new double[4][3];
+        clusters = new int[socks.length];
+        K_means(3);
         id1 = isolate(-1);
         id2 = isolate(id1);
         return new Offer(socks[id1], socks[id2]);
@@ -129,7 +134,6 @@ public class Player extends exchange.sim.Player {
                 mark = i;
             }
         }
-        //System.out.println(max + " " + mark);
         return mark;
     }
     
@@ -169,8 +173,51 @@ public class Player extends exchange.sim.Player {
                 mark = availableOffers.get(i);
             }
         }
-        System.out.println(minDistance + " " + mark);
         if (minDistance < maxDistance) return mark;
         else return -1;
+    }
+    
+    public void K_means(int rounds) {
+        centers[0][0] = 64; centers[0][1] = 64; centers[0][2] = 64;
+        centers[1][0] = 64; centers[1][1] = 192; centers[1][2] = 192;
+        centers[2][0] = 192; centers[2][1] = 192; centers[2][2] = 64;
+        centers[3][0] = 192; centers[3][1] = 64; centers[3][2] = 192;
+        for (int k = 0; k < rounds; k++) {
+            for (int i = 0; i < socks.length; i++) {
+                double min = 1e9;
+                for (int j = 0; j < 4; j++) {
+                    double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) + 
+                    Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
+                    if (dist < min) {
+                        min = dist;
+                        clusters[i] = j;
+                    }
+                }
+            }
+            double[][] new_centers;
+            int[] count;
+            new_centers = new double[4][3];
+            count = new int[4];
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 3; j++) {
+                    new_centers[i][j] = 0;
+                }
+                count[i] = 0;
+            }
+            for (int i = 0; i < socks.length; i++) {
+                int t = clusters[i];
+                count[t] ++;
+                new_centers[t][0] += socks[i].R;
+                new_centers[t][1] += socks[i].G;
+                new_centers[t][2] += socks[i].B;
+            }
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 3; j++) {
+                    centers[i][j] = new_centers[i][j] / count[i];
+                }
+                //System.out.println(count[i]);
+                //System.out.println(centers[i][0] + " " + centers[i][1] + " " + centers[i][2]);
+            }
+        }
     }
 }
