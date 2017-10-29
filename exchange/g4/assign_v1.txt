@@ -1,0 +1,13 @@
+The Hungarian algorithm only works on weighted bipartite graphs. Check this out for complete graphs: https://brilliant.org/wiki/blossom-algorithm/
+
+Also this: https://en.wikipedia.org/wiki/Blossom_algorithm
+
+HSV (hue, saturation, value) or HSL sorting could be a bit better. Check this discussion: https://stackoverflow.com/questions/6208980/sorting-a-list-of-rgb-triplets-into-a-spectrum
+
+We can use hilbert curves to reduce. But I'm not sure exactly how that might benefit us.
+
+Two very useful papers:
+1. http://people.csail.mit.edu/jaffer/Color/CSDR
+2. https://corte.si/posts/code/hilbert/portrait/index.html
+
+And finally this: https://www.alanzucconi.com/2015/09/30/colour-sorting/
