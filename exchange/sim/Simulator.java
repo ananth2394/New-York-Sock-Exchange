@@ -166,7 +166,7 @@ public class Simulator {
         return true;
     }
 
-    private static String state(double fps, int turn, Offer[] offers, Request[] requests, List<Transaction> transactions) {
+    private static String state(double fps, int turn, Offer[] offers, Request[] requests, List<Transaction> transactions) throws Exception {
         // TODO
         DecimalFormat df = new DecimalFormat("#.00");
         double refresh = 1000.0 / fps;

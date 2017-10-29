@@ -86,10 +86,23 @@ public class PlayerWrapper {
         return originalTimeout - timeout;
     }
 
-    public double getTotalEmbarrassment() {
-        List<Sock> list = player.getSocks();
+    public double getTotalEmbarrassment() throws Exception {
+        if (!thread.isAlive()) thread.start();
+        thread.call_start(() -> player.getSocks());
+        List<Sock> list = thread.call_wait(timeout);
+        long elapsedTime = thread.getElapsedTime();
+        timeout -= elapsedTime;
+        //return ret;
+        // List<Sock> list = player.getSocks();
         if (list.size() != 2 * n)
             return -1;
+        for (Sock sock : list) {
+            if (!socks.contains(sock))
+                throw new Exception("Player " + id + " reports socks without ownship.");
+            socks.remove(sock);
+        }
+        for (Sock sock : list)
+            socks.add(sock);
         double result = 0;
         for (int i = 0; i < list.size(); i += 2)
             result += list.get(i).distance(list.get(i + 1));
