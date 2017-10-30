@@ -94,8 +94,13 @@ public class PlayerWrapper {
         timeout -= elapsedTime;
         //return ret;
         // List<Sock> list = player.getSocks();
-        if (list.size() != 2 * n)
-            return -1;
+        System.out.println("list size is "+list.size());
+
+        if (list.size() != 2 * n){
+            //System.out.println("list size failed is "+list.size()+ " " +n);
+            return 1000000000;
+        }
+
         for (Sock sock : list) {
             if (!socks.contains(sock))
                 throw new Exception("Player " + id + " reports socks without ownship.");
