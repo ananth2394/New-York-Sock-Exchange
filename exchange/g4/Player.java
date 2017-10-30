@@ -153,7 +153,46 @@ public class Player extends exchange.sim.Player {
 
     @Override
     public List<Sock> getSocks() {
-        return Arrays.asList(socks);
+        ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
+        ArrayList<Sock> ans = exchange.g4_ananth.edmonds.SockArrangementFinder.getSocks(s);
+
+        System.out.println("Original List:");
+
+        for(int i = 0;i<s.size();i++)
+        {
+          System.out.print("Sock number: ");
+          System.out.print(Integer.toString(i+1) + " ");
+          System.out.println(s.get(i));
+        }
+
+          System.out.println("New List:");
+
+          for(int i = 0;i<ans.size();i++)
+          {
+            System.out.print("Sock number: ");
+            System.out.print(Integer.toString(i+1) + " ");
+            System.out.println(ans.get(i));
+          }
+
+        System.out.println("Pairs according to algorithm");
+        int minPrice = 0;
+        for(int i =0 ;i < ans.size()-1;i+=2)
+        {
+          System.out.println("Pair: ");
+          System.out.println(ans.get(i));
+          System.out.println(ans.get(i+1));
+          Sock s1 = ans.get(i);
+          Sock s2 = ans.get(i+1);
+          Double dist = s1.distance(s2);
+          minPrice += dist.intValue();
+
+          System.out.println("Distance between socks:" + Integer.toString(dist.intValue()));
+          System.out.println("Minmum Price so far:" + minPrice);
+          System.out.println();
+        }
+        System.out.print("Min price for this pairing: ");
+        System.out.println(minPrice);
+        return ans;
     }
     
     public int isolate(int ignore) {
