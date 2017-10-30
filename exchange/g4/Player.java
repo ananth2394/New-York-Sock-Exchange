@@ -154,7 +154,7 @@ public class Player extends exchange.sim.Player {
     @Override
     public List<Sock> getSocks() {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
-        ArrayList<Sock> ans = exchange.g4_ananth.edmonds.SockArrangementFinder.getSocks(s);
+        ArrayList<Sock> ans = getSocks(s);
 
         System.out.println("Original List:");
 
