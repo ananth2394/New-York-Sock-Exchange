@@ -35,6 +35,7 @@ public class ExchangeCenter {
         });
         List<Transaction> transactions = new ArrayList<>();
         for (Event e : events) {
+            System.err.println("" + e.id1 + " " + e.rank1 + " " + e.id2 + " " + e.rank2);
             if (!mark[e.id1][e.rank1] && !mark[e.id2][e.rank2]) {
                 // Transaction complete!
                 transactions.add(new Transaction(e.id1, e.rank1, e.id2, e.rank2, offers[e.id1].getSock(e.rank1), offers[e.id2].getSock(e.rank2)));

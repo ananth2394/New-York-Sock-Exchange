@@ -1,41 +1,47 @@
 package exchange.sim;
 
-import java.awt.Desktop;
+import javax.tools.JavaCompiler;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.ToolProvider;
+import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Set;
-
-import javax.tools.JavaCompiler;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
 
 public class Simulator {
     private static final String root = "exchange";
     private static final String statics_root = "statics";
 
+    private static Random random;
+    private static long seed = 20171030;
+    private static long[] playerSeeds;
     private static long playerTimeout = 10000;
     private static boolean gui = false;
+    private static boolean silent = false;
     private static double fps = 5;
     private static int n = 20;
     private static int p = 0;
     private static int t = 1000;
     private static List<String> playerNames = new ArrayList<String>();
     private static PlayerWrapper[] players;
+    private static double[] totalEmbarrassments;
 
     public static void main(String[] args) throws Exception {
-//		args = new String[] {"-p", "g0", "g0", "g0", "g0", "-g"};
+//		args = new String[] {"-p", "g1", "g2", "g3", "g4", "g5", "g6", "-n", "10", "-t", "100", "-s", "1411390388"};
         parseArgs(args);
         players = new PlayerWrapper[p];
+
+        random = new Random(seed);
+        playerSeeds = new long[p];
+        for (int i = 0; i < p; ++i)
+            playerSeeds[i] = random.nextLong();
+
         for (int i = 0; i < p; ++i) {
             Log.record("Loading player " + i + ": " + playerNames.get(i));
             Player player = loadPlayer(i, playerNames.get(i));
@@ -43,10 +49,10 @@ public class Simulator {
                 Log.record("Cannot load player " + i + ": " + playerNames.get(i));
                 System.exit(1);
             }
-            players[i] = new PlayerWrapper(player, i, n, playerTimeout);
+            players[i] = new PlayerWrapper(player, i, playerNames.get(i), n, playerTimeout, playerSeeds[i]);
         }
 
-        System.out.println("Starting game with " + p + " players");
+        if (!silent) System.out.println("Starting game with " + p + " players");
 
         HTTPServer server = null;
         if (gui) {
@@ -60,55 +66,81 @@ public class Simulator {
                 try {
                     Desktop.getDesktop().browse(new URI("http://localhost:" + server.port()));
                 } catch (URISyntaxException e) {
-                    e.printStackTrace();
+                    System.err.println(e.toString());
                 }
             }
         }
 
         // Simulation starts!
-        for (int i = 0; i < p; ++ i)
+        for (int i = 0; i < p; ++i)
             players[i].init(n, p, t);
         List<Transaction> lastTransactions = new ArrayList<Transaction>();
         Offer[] offers = new Offer[p];
         Request[] requests = new Request[p];
+        totalEmbarrassments = new double[p];
+        for (int i = 0; i < p; ++i) {
+            if (players[i].isActive()) {
+                try {
+                    totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
+                } catch (Exception e) {
+                    System.err.println(e.toString());
+//                    e.printStackTrace(System.err);
+                }
+            }
+        }
         for (int turn = 1; turn <= t; ++turn) {
-            System.out.println("Round " + turn + ":");
+            if (!silent) System.out.println("Round " + turn + ":");
+            for (int i = 0; i < p; ++ i) {
+                offers[i] = new Offer(null, null);
+                requests[i] = new Request(-1, -1, -1, -1);
+            }
             // Gather offers
             for (int i = 0; i < p; ++i) {
+                if (!players[i].isActive()) continue;
                 offers[i] = players[i].makeOffer(Arrays.asList(requests), lastTransactions);
-                if (offers[i].getFirst() != null && !players[i].owned(offers[i].getFirst()))
-                    throw new Exception(playerNames.get(i) + "(" + i + ") making invalid offer " + offers[i]);
-                if (offers[i].getSecond() != null && !players[i].owned(offers[i].getSecond()))
-                    throw new Exception(playerNames.get(i) + "(" + i + ") making invalid offer " + offers[i]);
-                System.out.println(playerNames.get(i) + "(" + i + ") making offer " + offers[i]);
+                if (offers[i].getFirst() != null && !players[i].owned(offers[i].getFirst())) {
+                    System.err.println(players[i].getName() + "(" + i + ") making invalid offer " + offers[i]);
+                    players[i].setIllegal(true);
+                    offers[i] = new Offer(null, null);
+                }
+                if (offers[i].getSecond() != null && !players[i].owned(offers[i].getSecond())) {
+                    System.err.println(players[i].getName() + "(" + i + ") making invalid offer " + offers[i]);
+                    players[i].setIllegal(true);
+                    offers[i] = new Offer(null, null);
+                }
+                if (!silent) System.out.println(players[i].getName() + "(" + i + ") making offer " + offers[i]);
             }
             if (gui) {
-                gui(server, state(fps, turn, offers, null, null));
+                gui(server, state(fps, turn, offers, null, null, totalEmbarrassments));
             }
             // Getting requests
             for (int i = 0; i < p; ++i) {
+                if (!players[i].isActive()) continue;
                 List<Offer> toSend = new ArrayList<>();
                 for (Offer offer : offers)
                     toSend.add(new Offer(offer));
                 requests[i] = players[i].requestExchange(toSend);
-                if (!validateRequest(offers, i, requests[i]))
-                    throw new Exception(playerNames.get(i) + "(" + i + ") making invalid requests " + requests[i]);
-                System.out.println(playerNames.get(i) + "(" + i + ") requesting " + requests[i]);
+                if (!validateRequest(offers, i, requests[i])) {
+                    System.err.println(players[i].getName() + "(" + i + ") making invalid requests " + requests[i]);
+                    players[i].setIllegal(true);
+                    requests[i] = new Request(-1, -1, -1, -1);
+                }
+                if (!silent) System.out.println(players[i].getName() + "(" + i + ") requesting " + requests[i]);
             }
 
 
             if (gui) {
-                gui(server, state(fps, turn, offers, requests, null));
+                gui(server, state(fps, turn, offers, requests, null, totalEmbarrassments));
             }
 
             lastTransactions = ExchangeCenter.exchange(offers, requests);
 
             if (gui) {
                 if (turn == t) fps = -1000.0;
-                gui(server, state(fps, turn, offers, requests, lastTransactions));
+                gui(server, state(fps, turn, offers, requests, lastTransactions, totalEmbarrassments));
             }
 
-            System.out.println("Completed transactions: ");
+            if (!silent) System.out.println("Completed transactions: ");
             for (Transaction transaction : lastTransactions) {
                 players[transaction.getFirstID()].removeSock(transaction.getFirstSock());
                 players[transaction.getSecondID()].removeSock(transaction.getSecondSock());
@@ -117,13 +149,28 @@ public class Simulator {
 
                 players[transaction.getFirstID()].completeTransaction(transaction);
                 players[transaction.getSecondID()].completeTransaction(transaction);
-                System.out.println(transaction);
+
+                if (players[transaction.getFirstID()].isActive()) {
+                    try {
+                        totalEmbarrassments[transaction.getFirstID()] = players[transaction.getFirstID()].getTotalEmbarrassment();
+                    } catch (Exception e) {
+                        System.err.println(e.toString());
+                    }
+                }
+                if (players[transaction.getSecondID()].isActive()) {
+                    try {
+                        totalEmbarrassments[transaction.getSecondID()] = players[transaction.getSecondID()].getTotalEmbarrassment();
+                    } catch (Exception e) {
+                        System.err.println(e.toString());
+                    }
+                }
+                if (!silent) System.out.println(transaction);
             }
-            System.out.println("");
+            if (!silent) System.out.println("");
         }
 
-        for (int i = 0; i < p; ++ i) {
-            System.out.println(playerNames.get(i) + " gets total embarrassment " + players[i].getTotalEmbarrassment());
+        for (int i = 0; i < p; ++i) {
+            System.out.println(players[i].getName() + " gets total embarrassment " + totalEmbarrassments[i]);
         }
 
         for (int i = 0; i < p; ++i) {
@@ -135,38 +182,26 @@ public class Simulator {
     private static boolean validateRequest(Offer[] offers, int id, Request request) {
         if (request == null)
             return false;
+        // ID range check
         if (request.getFirstID() < -1 || request.getFirstID() >= p)
             return false;
         if (request.getSecondID() < -1 || request.getSecondID() >= p)
             return false;
         if (request.getFirstID() == id || request.getSecondID() == id)
             return false;
+
         if (request.getFirstID() > -1) {
-            if (request.getFirstRank() < 1 || request.getFirstRank() > 2)
+            if (offers[request.getFirstID()].getSock(request.getFirstRank()) == null)
                 return false;
-            else if (request.getFirstRank() == 1) {
-                if (offers[request.getFirstID()].getFirst() == null)
-                    return false;
-            } else if (request.getFirstRank() == 2) {
-                if (offers[request.getFirstID()].getSecond() == null)
-                    return false;
-            }
         }
         if (request.getSecondID() > -1) {
-            if (request.getSecondRank() < 1 || request.getSecondRank() > 2)
+            if (offers[request.getSecondID()].getSock(request.getSecondRank()) == null)
                 return false;
-            else if (request.getSecondRank() == 1) {
-                if (offers[request.getSecondID()].getFirst() == null)
-                    return false;
-            } else if (request.getSecondRank() == 2) {
-                if (offers[request.getSecondID()].getSecond() == null)
-                    return false;
-            }
         }
         return true;
     }
 
-    private static String state(double fps, int turn, Offer[] offers, Request[] requests, List<Transaction> transactions) throws Exception {
+    private static String state(double fps, int turn, Offer[] offers, Request[] requests, List<Transaction> transactions, double[] totalEmbarrassments) throws Exception {
         // TODO
         DecimalFormat df = new DecimalFormat("#.00");
         double refresh = 1000.0 / fps;
@@ -174,8 +209,8 @@ public class Simulator {
         if (transactions == null) ret += ",0";
         else ret += "," + transactions.size();
         for (int i = 0; i < p; ++i) {
-            ret += "," + playerNames.get(i);
-            ret += "," + df.format(players[i].getTotalEmbarrassment());
+            ret += "," + players[i].getName();
+            ret += "," + df.format(totalEmbarrassments[i]);
             if (offers[i].getFirst() == null)
                 ret += ",no";
             else ret += "," + offers[i].getFirst().toRGB();
@@ -248,7 +283,7 @@ public class Simulator {
                         }
                         while (i + 1 < args.length && args[i + 1].charAt(0) != '-') {
                             ++i;
-                            for (int k = 0; k < rep; ++ k)
+                            for (int k = 0; k < rep; ++k)
                                 playerNames.add(args[i]);
                         }
                     } else if (args[i].equals("-t") || args[i].equals("--turns")) {
@@ -261,6 +296,11 @@ public class Simulator {
                             throw new IllegalArgumentException("Missing number of pairs");
                         }
                         n = Integer.parseInt(args[i]);
+                    } else if (args[i].equals("-s") || args[i].equals("--seed")) {
+                        if (++i == args.length) {
+                            throw new IllegalArgumentException("Missing seed");
+                        }
+                        seed = Long.parseLong(args[i]);
                     } else if (args[i].equals("-tl") || args[i].equals("--timelimit")) {
                         if (++i == args.length) {
                             throw new IllegalArgumentException("Missing time limit");
@@ -273,7 +313,9 @@ public class Simulator {
                         Log.setLogFile(args[i]);
                     } else if (args[i].equals("-g") || args[i].equals("--gui")) {
                         gui = true;
-                    }else if (args[i].equals("--fps")) {
+                    } else if (args[i].equals("--silent")) {
+                        silent = true;
+                    } else if (args[i].equals("--fps")) {
                         if (++i == args.length) {
                             throw new IllegalArgumentException("Missing fps");
                         }
@@ -347,7 +389,7 @@ public class Simulator {
 //        Player player = null;
 //        Constructor<?> constructor = raw_class.getConstructor(Integer.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE);
 //        player = (Player) constructor.newInstance(id, n, p, t);
-        return (Player)raw_class.newInstance();
+        return (Player) raw_class.newInstance();
     }
 
     private static long last_modified(Iterable<File> files) {

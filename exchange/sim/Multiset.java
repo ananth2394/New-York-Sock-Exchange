@@ -11,7 +11,7 @@ public class Multiset<E> {
 
     public Multiset() {
         map = new HashMap<E, Integer>();
-    };
+    }
 
     public void add(E e) {
         if (map.containsKey(e)) {

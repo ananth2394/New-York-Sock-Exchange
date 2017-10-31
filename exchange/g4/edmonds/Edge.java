@@ -6,11 +6,10 @@
 package exchange.g4.edmonds;
 
 /**
- *
  * @author raf
  */
 public class Edge {
-    public Vertex u,v;
+    public Vertex u, v;
     public int price;
 
     public Edge(Vertex u, Vertex v, int price) {
@@ -20,22 +19,19 @@ public class Edge {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return (this.u.id + 1) + " " + (this.v.id + 1) + " " + this.price;
     }
 
-    public Vertex getU()
-    {
-      return this.u;
+    public Vertex getU() {
+        return this.u;
     }
 
-    public Vertex getV()
-    {
-      return this.v;
+    public Vertex getV() {
+        return this.v;
     }
 
-    public int getPrice()
-    {
-      return this.price;
+    public int getPrice() {
+        return this.price;
     }
 }

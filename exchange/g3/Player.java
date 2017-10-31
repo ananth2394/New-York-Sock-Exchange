@@ -1,4 +1,4 @@
-package exchange.g0;
+package exchange.g3;
 
 import exchange.sim.Offer;
 import exchange.sim.Request;
@@ -6,25 +6,30 @@ import exchange.sim.Sock;
 import exchange.sim.Transaction;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Player extends exchange.sim.Player {
     /*
         Inherited from exchange.sim.Player:
-        Random random   -       Random number generator, if you need it
 
         Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
     private int id1, id2, id;
     private Sock[] socks;
+    private SockCollection socksCollection;
+    private int turn = -1;
+
+    private RoundCollection rounds;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
-        this.socks = (Sock[]) socks.toArray(new Sock[2 * n]);
+        this.socks = socks.toArray(new Sock[2 * n]);
+        this.socksCollection = new SockCollection(this.socks);
+        this.rounds = new RoundCollection();
     }
+
 
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
@@ -32,23 +37,18 @@ public class Player extends exchange.sim.Player {
             lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
-        int test = random.nextInt(3);
-        if (test == 0) {
-            // In Offer object, null means no sock is offered
-            return new Offer(null, null);
-        } else if (test == 1) {
-            // Making random offer
-            id1 = random.nextInt(socks.length);
-            return new Offer(socks[id1], null);
-        } else if (test == 2) {
-            // Making random offer
-            id1 = random.nextInt(socks.length);
-            id2 = random.nextInt(socks.length);
-            while (id1 == id2)
-                id2 = random.nextInt(socks.length);
-            return new Offer(socks[id1], socks[id2]);
-        }
-        return null;
+
+        // Tracks the current turn number.
+        this.turn += 1;
+
+        rounds.putTransactionInfo(lastRequests, lastTransactions);
+
+        int[] worstPairIds = this.socksCollection.getWorstPairIds();
+        this.id1 = worstPairIds[0];
+        this.id2 = worstPairIds[1];
+        return new Offer(
+                this.socksCollection.getSock(this.id1),
+                this.socksCollection.getSock(this.id2));
     }
 
     @Override
@@ -62,6 +62,8 @@ public class Player extends exchange.sim.Player {
 
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
+
+        rounds.putOfferInfo(offers);
 
         List<Integer> availableOffers = new ArrayList<>();
         for (int i = 0; i < offers.size(); ++i) {
@@ -112,12 +114,58 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socks[id1] = newSock;
-        else socks[id2] = newSock;
+        if (rank == 1) socksCollection.putSock(id1, newSock);
+        else socksCollection.putSock(id2, newSock);
     }
 
     @Override
     public List<Sock> getSocks() {
-        return Arrays.asList(socks);
+        return socksCollection.getCollection();
+    }
+}
+
+// Maintains information of all the rounds.
+// - Need to implement a KB for gathering info.
+class RoundCollection {
+    private List<Round> roundsInfo;
+    private int turn = -1;
+
+    public RoundCollection() {
+        roundsInfo = new ArrayList<>();
+    }
+
+    public void putOfferInfo(List<Offer> offers) {
+        turn += 1;
+
+        roundsInfo.add(new Round(offers));
+    }
+
+    public void putTransactionInfo(
+            List<Request> requests,
+            List<Transaction> transactions) {
+
+        // For all turn# >= 0 we have request information.
+        if (turn >= 0) {
+            roundsInfo.get(turn).requests = requests;
+            roundsInfo.get(turn).transactions = transactions;
+        }
+    }
+
+    public Round getRoundInfo(int turn) {
+        return roundsInfo.get(turn);
+    }
+}
+
+// Stores offers, requests, and transactions for a round.
+class Round {
+    public List<Offer> offers;
+    public List<Request> requests;
+    public List<Transaction> transactions;
+
+    public Round() {
+    }
+
+    public Round(List<Offer> offers) {
+        this.offers = offers;
     }
 }

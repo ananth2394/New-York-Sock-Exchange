@@ -6,12 +6,11 @@
 package exchange.g4.edmonds;
 
 /**
- *
  * @author raf
  */
 
 // one-vertex blossom
-public class BlueBlossom extends Blossom{
+public class BlueBlossom extends Blossom {
 
     Vertex vertex;
 
@@ -22,12 +21,12 @@ public class BlueBlossom extends Blossom{
         v.addToBlossom(this);
     }
 
-    public int getStopka(){
+    public int getStopka() {
         return this.vertex.id;
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return super.toString() + "[" + (this.vertex.id + 1) + "b" + "]";
     }
 

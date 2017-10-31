@@ -8,7 +8,6 @@ package exchange.g4.edmonds;
 import java.util.ArrayList;
 
 /**
- *
  * @author raf
  */
 public class Dumbbell {
@@ -29,12 +28,12 @@ public class Dumbbell {
         b2.dumbbellRef = this;
         b2.treeNodeRef = null;
         // este upravime stopky, aby sedeli (mali by byt pri hrane, ktora spaja cinky)
-        if (b1 instanceof GreenBlossom){
+        if (b1 instanceof GreenBlossom) {
             GreenBlossom gb1 = (GreenBlossom) b1;
             gb1.setStopkaByEdge(e);
         }
 
-        if (b2 instanceof GreenBlossom){
+        if (b2 instanceof GreenBlossom) {
             GreenBlossom gb2 = (GreenBlossom) b2;
             gb2.setStopkaByEdge(e);
         }
@@ -43,22 +42,21 @@ public class Dumbbell {
     }
 
     @Override
-    public String toString(){
-        if (false && b1 instanceof BlueBlossom && b2 instanceof BlueBlossom){
-            return (((BlueBlossom)b1).vertex.id + 1) + "--" + (((BlueBlossom)b2).vertex.id + 1);
-        }
-        else {
+    public String toString() {
+        if (false && b1 instanceof BlueBlossom && b2 instanceof BlueBlossom) {
+            return (((BlueBlossom) b1).vertex.id + 1) + "--" + (((BlueBlossom) b2).vertex.id + 1);
+        } else {
             return b1 + " " + b2;
         }
     }
 
-    public Pair<Integer,ArrayList<Edge> > getTotalMatchingPrice(){
-        System.out.println(connectingEdge);
+    public Pair<Integer, ArrayList<Edge>> getTotalMatchingPrice() {
+//        System.out.println(connectingEdge);
         int total_price = connectingEdge.price;
-        Pair<Integer, ArrayList<Edge> > R1 =b1.getMatchingPrice();
-        Pair<Integer, ArrayList<Edge> > R2 = b2.getMatchingPrice();
+        Pair<Integer, ArrayList<Edge>> R1 = b1.getMatchingPrice();
+        Pair<Integer, ArrayList<Edge>> R2 = b2.getMatchingPrice();
 
-        total_price +=  R1.getLeft() + R2.getLeft();
+        total_price += R1.getLeft() + R2.getLeft();
 
         ArrayList<Edge> edge_list = new ArrayList<>();
         edge_list.addAll(R1.getRight());
@@ -68,7 +66,7 @@ public class Dumbbell {
 
     }
 
-    public Edge getConnectingEdge(){
+    public Edge getConnectingEdge() {
         return this.connectingEdge;
     }
 

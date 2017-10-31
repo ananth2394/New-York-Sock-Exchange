@@ -1,14 +1,14 @@
 package exchange.g4;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import exchange.g4.edmonds.*;
+import exchange.g4.edmonds.SockArrangementFinder;
 import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
 import exchange.sim.Transaction;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Player extends exchange.sim.Player {
     /*
@@ -75,7 +75,7 @@ public class Player extends exchange.sim.Player {
          */
 
         List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); ++ i) {
+        for (int i = 0; i < offers.size(); ++i) {
             if (i == id) continue;
 
             // Encoding the offer information into integer: id * 2 + rank - 1
@@ -85,7 +85,7 @@ public class Player extends exchange.sim.Player {
                 availableOffers.add(i * 2 + 1);
         }
 
-        if (availableOffers.size() == 0) 
+        if (availableOffers.size() == 0)
             return new Request(-1, -1, -1, -1);
 
         int expect1 = -1;
@@ -150,43 +150,40 @@ public class Player extends exchange.sim.Player {
     public List<Sock> getSocks() {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = SockArrangementFinder.getSocks(s);
-
-        System.out.println("Original List:");
-
-        for(int i = 0;i<s.size();i++)
-        {
-            System.out.print("Sock number: ");
-            System.out.print(Integer.toString(i+1) + " ");
-            System.out.println(s.get(i));
-        }
-
-        System.out.println("New List:");
-
-        for(int i = 0;i<ans.size();i++)
-        {
-            System.out.print("Sock number: ");
-            System.out.print(Integer.toString(i+1) + " ");
-            System.out.println(ans.get(i));
-        }
-
-        System.out.println("Pairs according to algorithm");
+//
+//        System.out.println("Original List:");
+//
+//        for (int i = 0; i < s.size(); i++) {
+//            System.out.print("Sock number: ");
+//            System.out.print(Integer.toString(i + 1) + " ");
+//            System.out.println(s.get(i));
+//        }
+//
+//        System.out.println("New List:");
+//
+//        for (int i = 0; i < ans.size(); i++) {
+//            System.out.print("Sock number: ");
+//            System.out.print(Integer.toString(i + 1) + " ");
+//            System.out.println(ans.get(i));
+//        }
+//
+//        System.out.println("Pairs according to algorithm");
         int minPrice = 0;
-        for(int i =0 ;i < ans.size()-1;i+=2)
-        {
-            System.out.println("Pair: ");
-            System.out.println(ans.get(i));
-            System.out.println(ans.get(i+1));
+        for (int i = 0; i < ans.size() - 1; i += 2) {
+//            System.out.println("Pair: ");
+//            System.out.println(ans.get(i));
+//            System.out.println(ans.get(i + 1));
             Sock s1 = ans.get(i);
-            Sock s2 = ans.get(i+1);
+            Sock s2 = ans.get(i + 1);
             Double dist = s1.distance(s2);
             minPrice += dist.intValue();
 
-            System.out.println("Distance between socks:" + Integer.toString(dist.intValue()));
-            System.out.println("Minmum Price so far:" + minPrice);
-            System.out.println();
+//            System.out.println("Distance between socks:" + Integer.toString(dist.intValue()));
+//            System.out.println("Minmum Price so far:" + minPrice);
+//            System.out.println();
         }
-        System.out.print("Min price for this pairing: ");
-        System.out.println(minPrice);
+//        System.out.print("Min price for this pairing: ");
+//        System.out.println(minPrice);
         return ans;
     }
 
@@ -259,15 +256,23 @@ public class Player extends exchange.sim.Player {
     }
 
     public void K_means(int rounds) {
-        centers[0][0] = 64; centers[0][1] = 64; centers[0][2] = 64;
-        centers[1][0] = 64; centers[1][1] = 192; centers[1][2] = 192;
-        centers[2][0] = 192; centers[2][1] = 192; centers[2][2] = 64;
-        centers[3][0] = 192; centers[3][1] = 64; centers[3][2] = 192;
+        centers[0][0] = 64;
+        centers[0][1] = 64;
+        centers[0][2] = 64;
+        centers[1][0] = 64;
+        centers[1][1] = 192;
+        centers[1][2] = 192;
+        centers[2][0] = 192;
+        centers[2][1] = 192;
+        centers[2][2] = 64;
+        centers[3][0] = 192;
+        centers[3][1] = 64;
+        centers[3][2] = 192;
         for (int k = 0; k < rounds; k++) {
             for (int i = 0; i < socks.length; i++) {
                 double min = 1e9;
                 for (int j = 0; j < 4; j++) {
-                    double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) + 
+                    double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
                             Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
                     if (dist < min) {
                         min = dist;
@@ -287,7 +292,7 @@ public class Player extends exchange.sim.Player {
             }
             for (int i = 0; i < socks.length; i++) {
                 int t = clusters[i];
-                count[t] ++;
+                count[t]++;
                 new_centers[t][0] += socks[i].R;
                 new_centers[t][1] += socks[i].G;
                 new_centers[t][2] += socks[i].B;
@@ -316,7 +321,7 @@ public class Player extends exchange.sim.Player {
         }
         for (int i = 0; i < socks.length; i++) {
             int j = clusters[i];
-            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) + 
+            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
                     Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
             if (dist > maxFirst[j]) {
                 maxFirst[j] = dist;
@@ -324,7 +329,7 @@ public class Player extends exchange.sim.Player {
         }
         for (int i = 0; i < socks.length; i++) {
             int j = clusters[i];
-            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) + 
+            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
                     Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
             if ((dist > maxSecond[j]) && (dist < maxFirst[j])) {
                 maxSecond[j] = dist;
@@ -364,7 +369,6 @@ public class Player extends exchange.sim.Player {
         }
         if (min < 2 * maxDist[num]) {
             return mark;
-        }
-        else return -1;
+        } else return -1;
     }
 }

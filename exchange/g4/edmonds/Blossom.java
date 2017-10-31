@@ -8,7 +8,6 @@ package exchange.g4.edmonds;
 import java.util.ArrayList;
 
 /**
- *
  * @author raf
  */
 class Blossom {
@@ -23,20 +22,20 @@ class Blossom {
         thickness += r;
     }
 
-    public void setStopkaByEdge(Edge e){
+    public void setStopkaByEdge(Edge e) {
         return;
     }
 
-    public void setStopkaByEdge(Edge e, int level){
+    public void setStopkaByEdge(Edge e, int level) {
         return;
     }
 
-    public int getStopka(){
+    public int getStopka() {
         return 0;
     }
 
     // vrati cenu parovania vo vnutri bubliny
-    public Pair<Integer,ArrayList<Edge> > getMatchingPrice(){
-        return new Pair<Integer,ArrayList<Edge> > (0,new ArrayList<Edge>());
+    public Pair<Integer, ArrayList<Edge>> getMatchingPrice() {
+        return new Pair<Integer, ArrayList<Edge>>(0, new ArrayList<Edge>());
     }
 }

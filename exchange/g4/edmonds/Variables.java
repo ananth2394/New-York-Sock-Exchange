@@ -6,7 +6,6 @@
 package exchange.g4.edmonds;
 
 /**
- *
  * @author raf
  */
 public class Variables {

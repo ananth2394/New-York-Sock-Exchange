@@ -1,13 +1,13 @@
 package exchange.sim;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
 public abstract class Player {
     protected Random random = new Random();
 
-    public Player() {}
+    public Player() {
+    }
 
     public abstract void init(int id, int n, int p, int t, List<Sock> socks);
 
