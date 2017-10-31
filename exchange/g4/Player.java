@@ -149,6 +149,7 @@ public class Player extends exchange.sim.Player {
     @Override
     public List<Sock> getSocks() {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
+
         ArrayList<Sock> ans = null;
 
         ans = SockHelper.getSocks(s);
@@ -174,6 +175,28 @@ public class Player extends exchange.sim.Player {
         }
 
         System.out.println("Pairs according to algorithm");
+=======
+
+//        ArrayList<Sock> ans = SockArrangementFinder.getSocks(s);
+//
+//        System.out.println("Original List:");
+//
+//        for (int i = 0; i < s.size(); i++) {
+//            System.out.print("Sock number: ");
+//            System.out.print(Integer.toString(i + 1) + " ");
+//            System.out.println(s.get(i));
+//        }
+//
+//        System.out.println("New List:");
+//
+//        for (int i = 0; i < ans.size(); i++) {
+//            System.out.print("Sock number: ");
+//            System.out.print(Integer.toString(i + 1) + " ");
+//            System.out.println(ans.get(i));
+//        }
+//
+//        System.out.println("Pairs according to algorithm");
+>>>>>>> Stashed changes
         int minPrice = 0;
         for(int i =0 ;i < ans.size()-1;i+=2)
         {
