@@ -362,11 +362,14 @@ public class Simulator {
 
     public static Player loadPlayer(int id, String name) throws IOException, ClassNotFoundException, InstantiationException, InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         String sep = File.separator;
+        System.getProperties().put("java.home", "C:\\Program Files\\Java\\jdk1.8.0_144\\jre");
+        //System.setProperty("java.home", "C:\\Program Files\\Java\\jdk1.8.0_144");
         Set<File> player_files = directory(root + sep + name, ".java");
         File class_file = new File(root + sep + name + sep + "Player.class");
         long class_modified = class_file.exists() ? class_file.lastModified() : -1;
         if (class_modified < 0 || class_modified < last_modified(player_files) ||
                 class_modified < last_modified(directory(root + sep + "sim", ".java"))) {
+
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
             if (compiler == null)
                 throw new IOException("Cannot find Java compiler");
