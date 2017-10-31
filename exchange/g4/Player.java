@@ -175,7 +175,6 @@ public class Player extends exchange.sim.Player {
         }
 
         System.out.println("Pairs according to algorithm");
-=======
 
 //        ArrayList<Sock> ans = SockArrangementFinder.getSocks(s);
 //
@@ -196,7 +195,6 @@ public class Player extends exchange.sim.Player {
 //        }
 //
 //        System.out.println("Pairs according to algorithm");
->>>>>>> Stashed changes
         int minPrice = 0;
         for(int i =0 ;i < ans.size()-1;i+=2)
         {
