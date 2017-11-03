@@ -18,7 +18,8 @@ public class Player extends exchange.sim.Player {
      * Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
      * the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
-    private int id1, id2, id3, id4, id5, id6, id7, id8, id;
+    private int id;
+    private int[] id_offer;
     private double maxDistance, minDistance;
     private Sock[] socks;
     private double[][] centers;
@@ -34,6 +35,7 @@ public class Player extends exchange.sim.Player {
         this.isTransaction = true;
         this.current = 0;
         this.maxDist = new double[8];
+        this.id_offer = new int[8];
     }
 
     @Override
@@ -50,24 +52,24 @@ public class Player extends exchange.sim.Player {
             current = 1;
             isTransaction = false;
             chooseOffer();
-            return new Offer(socks[id1], socks[id2]);
+            return new Offer(socks[id_offer[0]], socks[id_offer[1]]);
         }
         else {
             if (current == 0) {
                 current = 1;
-                return new Offer(socks[id1], socks[id2]);
+                return new Offer(socks[id_offer[0]], socks[id_offer[1]]);
             }
             else if (current == 1) {
                 current = 2;
-                return new Offer(socks[id3], socks[id4]);
+                return new Offer(socks[id_offer[2]], socks[id_offer[3]]);
             }
             else if (current == 2) {
                 current = 3;
-                return new Offer(socks[id5], socks[id6]);
+                return new Offer(socks[id_offer[4]], socks[id_offer[5]]);
             }
             else {
                 current = 0;
-                return new Offer(socks[id7], socks[id8]);
+                return new Offer(socks[id_offer[6]], socks[id_offer[7]]);
             }
         }
     }
@@ -85,7 +87,7 @@ public class Player extends exchange.sim.Player {
          */
 
         List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); ++i) {
+        for (int i = 0; i < offers.size(); i++) {
             if (i == id) continue;
 
             // Encoding the offer information into integer: id * 2 + rank - 1
@@ -101,38 +103,38 @@ public class Player extends exchange.sim.Player {
         int[] expect;
         expect = new int[6];
         if (current == 0) {
-            //int expect1 = close(availableOffers, offers, -1);
-            //int expect2 = close(availableOffers, offers, expect1);
-            expect[0] = chooseRequest(availableOffers, offers, id1, 0);
-            expect[1] = chooseRequest(availableOffers, offers, id2, 1);
-            expect[2] = chooseRequest(availableOffers, offers, id3, 2);
-            expect[3] = chooseRequest(availableOffers, offers, id4, 3);
-            expect[4] = chooseRequest(availableOffers, offers, id5, 4);
-            expect[5] = chooseRequest(availableOffers, offers, id6, 5);
+            int j = 0;
+            for (int i = 0; i < 6; i++) {
+                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
+                j++;
+            }
         }
         else if (current == 1) {
-            expect[0] = chooseRequest(availableOffers, offers, id3, 2);
-            expect[1] = chooseRequest(availableOffers, offers, id4, 3);
-            expect[2] = chooseRequest(availableOffers, offers, id5, 4);
-            expect[3] = chooseRequest(availableOffers, offers, id6, 5);
-            expect[4] = chooseRequest(availableOffers, offers, id7, 6);
-            expect[5] = chooseRequest(availableOffers, offers, id8, 7);
+            int j = 2;
+            for (int i = 0; i < 6; i++) {
+                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
+                j++;
+            }
         }
         else if (current == 2) {
-            expect[0] = chooseRequest(availableOffers, offers, id1, 0);
-            expect[1] = chooseRequest(availableOffers, offers, id2, 1);
-            expect[2] = chooseRequest(availableOffers, offers, id5, 4);
-            expect[3] = chooseRequest(availableOffers, offers, id6, 5);
-            expect[4] = chooseRequest(availableOffers, offers, id7, 6);
-            expect[5] = chooseRequest(availableOffers, offers, id8, 7);
+            int j = 0;
+            for (int i = 0; i < 6; i++) {
+                if (j == 2) {
+                    j = j + 2;
+                }
+                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
+                j++;
+            }
         }
         else {
-            expect[0] = chooseRequest(availableOffers, offers, id1, 0);
-            expect[1] = chooseRequest(availableOffers, offers, id2, 1);
-            expect[2] = chooseRequest(availableOffers, offers, id3, 2);
-            expect[3] = chooseRequest(availableOffers, offers, id4, 3);
-            expect[4] = chooseRequest(availableOffers, offers, id7, 6);
-            expect[5] = chooseRequest(availableOffers, offers, id8, 7);
+            int j = 0;
+            for (int i = 0; i < 6; i++) {
+                if (j == 4) {
+                    j = j + 2;
+                }
+                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
+                j++;
+            }
         }
         for (int i = 0; i < 4; i++) {
             for (int j = i + 1; j < 5; j++) {
@@ -182,20 +184,20 @@ public class Player extends exchange.sim.Player {
             newSock = transaction.getFirstSock();
         }
         if (current == 0) {
-            if (rank == 1) socks[id7] = newSock;
-            else socks[id8] = newSock;
+            if (rank == 1) socks[id_offer[6]] = newSock;
+            else socks[id_offer[7]] = newSock;
         }
         else if (current == 1) {
-            if (rank == 1) socks[id1] = newSock;
-            else socks[id2] = newSock;
+            if (rank == 1) socks[id_offer[0]] = newSock;
+            else socks[id_offer[1]] = newSock;
         }
         else if (current == 2) {
-            if (rank == 1) socks[id3] = newSock;
-            else socks[id4] = newSock;
+            if (rank == 1) socks[id_offer[2]] = newSock;
+            else socks[id_offer[3]] = newSock;
         }
         else {
-            if (rank == 1) socks[id5] = newSock;
-            else socks[id6] = newSock;
+            if (rank == 1) socks[id_offer[4]] = newSock;
+            else socks[id_offer[5]] = newSock;
         }
         isTransaction = true;
     }
@@ -204,131 +206,28 @@ public class Player extends exchange.sim.Player {
     public List<Sock> getSocks() {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
-        if (socks.length > 50) {
+        if (socks.length > 200) {
             ans = SockHelper.getSocks(s);
         }
         else {
             ans = SockArrangementFinder.getSocks(s);
         }
-        
-//
-//        System.out.println("Original List:");
-//
-//        for (int i = 0; i < s.size(); i++) {
-//            System.out.print("Sock number: ");
-//            System.out.print(Integer.toString(i + 1) + " ");
-//            System.out.println(s.get(i));
-//        }
-//
-//        System.out.println("New List:");
-//
-//        for (int i = 0; i < ans.size(); i++) {
-//            System.out.print("Sock number: ");
-//            System.out.print(Integer.toString(i + 1) + " ");
-//            System.out.println(ans.get(i));
-//        }
-//
-//        System.out.println("Pairs according to algorithm");
+
         int minPrice = 0;
         for (int i = 0; i < ans.size() - 1; i += 2) {
-//            System.out.println("Pair: ");
-//            System.out.println(ans.get(i));
-//            System.out.println(ans.get(i + 1));
             Sock s1 = ans.get(i);
             Sock s2 = ans.get(i + 1);
             Double dist = s1.distance(s2);
             minPrice += dist.intValue();
-
-//            System.out.println("Distance between socks:" + Integer.toString(dist.intValue()));
-//            System.out.println("Minmum Price so far:" + minPrice);
-//            System.out.println();
         }
-//        System.out.print("Min price for this pairing: ");
-//        System.out.println(minPrice);
         return ans;
     }
 
-    public int isolate(int ignore) {
-        double[] dist;
-        dist = new double[socks.length];
-        for (int i = 0; i < socks.length; i++) {
-            if (i == ignore) {
-                dist[i] = 0;
-                continue;
-            }
-            double min = 1e9;
-            for (int j = 0; j < socks.length; j++) {
-                if (i == j) continue;
-                double temp = socks[i].distance(socks[j]);
-                if (temp < min) {
-                    min = temp;
-                }
-            }
-            dist[i] = min;
-        }
-        maxDistance = 0;
-        int mark = -1;
-        for (int i = 0; i < socks.length; i++) {
-            if (dist[i] > maxDistance) {
-                maxDistance = dist[i];
-                mark = i;
-            }
-        }
-        return mark;
-    }
-
-    public int close(List<Integer> availableOffers, List<Offer> offers, int ignore) {
-        int n = availableOffers.size();
-        double[] dist;
-        dist = new double[n];
-        for (int i = 0; i < n; i++) {
-            int k = availableOffers.get(i);
-            if (k == ignore) {
-                dist[i] = 1e9;
-                continue;
-            }
-            int k1 = k / 2;
-            int k2 = k % 2 + 1;
-            Sock sock0;
-            if (k2 == 1) {
-                sock0 = offers.get(k1).getFirst();
-            } else {
-                sock0 = offers.get(k1).getSecond();
-            }
-            double min = 1e9;
-            for (int j = 0; j < socks.length; j++) {
-                double temp = sock0.distance(socks[j]);
-                if (temp < min) {
-                    min = temp;
-                }
-            }
-            dist[i] = min;
-        }
-        minDistance = 1e9;
-        int mark = -1;
-        for (int i = 0; i < n; i++) {
-            if (dist[i] < minDistance) {
-                minDistance = dist[i];
-                mark = availableOffers.get(i);
-            }
-        }
-        if (minDistance < maxDistance) return mark;
-        else return -1;
-    }
-
     public void K_means(int rounds) {
-        centers[0][0] = 64;
-        centers[0][1] = 64;
-        centers[0][2] = 64;
-        centers[1][0] = 64;
-        centers[1][1] = 192;
-        centers[1][2] = 192;
-        centers[2][0] = 192;
-        centers[2][1] = 192;
-        centers[2][2] = 64;
-        centers[3][0] = 192;
-        centers[3][1] = 64;
-        centers[3][2] = 192;
+        centers[0][0] = 64; centers[0][1] = 64; centers[0][2] = 64;
+        centers[1][0] = 64; centers[1][1] = 192; centers[1][2] = 192;
+        centers[2][0] = 192; centers[2][1] = 192; centers[2][2] = 64;
+        centers[3][0] = 192; centers[3][1] = 64; centers[3][2] = 192;
         for (int k = 0; k < rounds; k++) {
             for (int i = 0; i < socks.length; i++) {
                 double min = 1e9;
@@ -403,15 +302,14 @@ public class Player extends exchange.sim.Player {
                 markThird[j] = i;
             }
         }
-        id1 = markSecond[0]; id2 = markSecond[1];
-        id3 = markSecond[2]; id4 = markSecond[3];
-        id5 = markThird[0]; id6 = markThird[1];
-        id7 = markThird[2]; id8 = markThird[3];
+        id_offer[0] = markSecond[0]; id_offer[1] = markSecond[1];
+        id_offer[2] = markSecond[2]; id_offer[3] = markSecond[3];
+        id_offer[4] = markThird[0]; id_offer[5] = markThird[1];
+        id_offer[6] = markThird[2]; id_offer[7] = markThird[3];
         maxDist[0] = maxSecond[0]; maxDist[1] = maxSecond[1];
         maxDist[2] = maxSecond[2]; maxDist[3] = maxSecond[3];
         maxDist[4] = maxThird[0]; maxDist[5] = maxThird[1];
         maxDist[6] = maxThird[2]; maxDist[7] = maxThird[3];
-        System.out.println("!!!");
     }
 
     public int chooseRequest(List<Integer> availableOffers, List<Offer> offers, int identity, int num) {

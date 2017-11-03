@@ -35,7 +35,7 @@ for run in range(repetition):
         p = open("tmp.log", "w")
         err = open("err.log", "w")
         players_to_run = rotate_list(players, k)
-        subprocess.run(["java", "exchange.sim.Simulator", "-s", str(seeds[run]), "-n", str(num_pairs), "-t", str(turnlimit), "-tl", str(timelimit), "-p"] + players_to_run, stdout = p, stderr = err)
+        subprocess.run(["java", "exchange.sim.Simulator", "--silent", "-s", str(seeds[run]), "-n", str(num_pairs), "-t", str(turnlimit), "-tl", str(timelimit), "-p"] + players_to_run, stdout = p, stderr = err)
         p.close()
         err.close()
         with open("tmp.log", "r") as log:
