@@ -29,7 +29,7 @@ public class SockTrader{
       {
         this.socks = socks;
         this.player_id = id;
-        this.market = new MarketValue(this.player_id);
+        this.market = new MarketValue(this.player_id,20);
 
       }
 
@@ -40,12 +40,18 @@ public class SockTrader{
           market.updateMarket(lastRequests,lastTransactions,this.lastOffers); //Not used right now
 
         this.minDistance = computeDistanceArray();
+
+
         this.sock_id1 = maxIndex(minDistance);
+        Sock offer_sock_1 = maxSock(minDistance);
 
-        
-        Sock offer_sock = maxSock(minDistance);
+        ArrayList<Integer> exclude_list = new ArrayList<Integer>();
+        exclude_list.add((Integer)this.sock_id1);
 
-        return new Offer(offer_sock,null);
+        this.sock_id2 = maxIndex(minDistance,exclude_list);
+        Sock offer_sock_2 = maxSock(minDistance,exclude_list);
+
+        return new Offer(offer_sock_1,offer_sock_2);
 
       }
 
@@ -55,7 +61,7 @@ public class SockTrader{
 
           this.lastOffers = offers;
 
-          Pair<Integer,Integer> offer_index = pickBestOffer(offers);
+          Pair<Integer,Integer> offer_index = pickBestRequest(offers);
 
           // if(offer_index.getKey()<0)
           // {
@@ -69,7 +75,7 @@ public class SockTrader{
 
       }
 
-      public Pair<Integer, Integer> pickBestOffer(List<Offer> offers)
+      public Pair<Integer, Integer> pickBestRequest(List<Offer> offers)
       {
           ArrayList<Sock> exclude_list = new ArrayList();
 
@@ -96,33 +102,31 @@ public class SockTrader{
           {
             if(i!=this.player_id)
             {
-
-              if (offers.get(i).getFirst() != null)
+              for(int j = 1;j<=2;j++)
               {
-                Sock s = offers.get(i).getFirst();
-                if(getExternalMinDistance(s,exclude_list)<mn)
+                if (offers.get(i).getSock(j) != null)
                 {
-                  mndex = new Pair<>(i,1);
-                  mn = getExternalMinDistance(s,exclude_list);
-                }
-              }
-              if (offers.get(i).getSecond() != null)
-              {
-                {
-                  Sock s = offers.get(i).getSecond();
-                  if(getExternalMinDistance(s,exclude_list)>mn)
+                  Sock s = offers.get(i).getSock(j);
+                  if(getRequestValue(s,exclude_list)<mn)
                   {
-                    mndex = new Pair<>(i,2);
-                    mn = getExternalMinDistance(s,exclude_list);
+                    mndex = new Pair<>(i,j);
+                    mn = getRequestValue(s,exclude_list);
                   }
                 }
               }
             }
           }
 
+
           return mndex;
       }
 
+      public Double getRequestValue(Sock s,ArrayList <Sock> exclude_list)
+      {
+
+        return getExternalMinDistance(s,exclude_list);
+
+      }
       public void updateInformation(ArrayList<Sock> socks)
         {
           this.socks = socks;
@@ -214,7 +218,7 @@ public class SockTrader{
 
                   }
 
-                  minDistance.set(i,mn);
+                  minDistance.set(i,mn + market.getSockMarketValue(this.socks.get(i)));
               }
 
               return minDistance;
@@ -239,6 +243,25 @@ public class SockTrader{
 
             }
 
+            public int maxIndex(ArrayList<Double> array, ArrayList<Integer> exclude_list)
+            {
+              int mxdex = -1;
+              int n = array.size();
+              Double mx = -Double.MAX_VALUE;
+
+              for(int i = 0;i<n;i++)
+              {
+                if(!exclude_list.contains((Integer)i) && array.get(i) > mx)
+                {
+                  mx = array.get(i);
+                  mxdex = i;
+                }
+              }
+
+              return mxdex;
+
+            }
+
             public Sock maxSock(ArrayList<Double> array)
             {
               int max_index = maxIndex(array);
@@ -246,6 +269,12 @@ public class SockTrader{
               return this.socks.get(max_index);
             }
 
+            public Sock maxSock(ArrayList<Double> array, ArrayList<Integer> exclude_list)
+            {
+              int max_index = maxIndex(array,exclude_list);
+
+              return this.socks.get(max_index);
+            }
 
 
 }
