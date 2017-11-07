@@ -1,6 +1,9 @@
 package exchange.g4;
 
 import exchange.g4.edmonds.SockArrangementFinder;
+import exchange.g4.marketvalue.*;
+import exchange.g4.socktrader.*;
+
 import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
@@ -14,7 +17,7 @@ public class Player extends exchange.sim.Player {
     /*
      * Inherited from exchange.sim.Player:
      * Random random   -       Random number generator, if you need it
-     * 
+     *
      * Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
      * the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
@@ -28,6 +31,10 @@ public class Player extends exchange.sim.Player {
     private int current;
     private double[] maxDist;
 
+
+    private SockTrader trader;
+    private List<Offer> lastOffers;
+
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
@@ -36,6 +43,11 @@ public class Player extends exchange.sim.Player {
         this.current = 0;
         this.maxDist = new double[8];
         this.id_offer = new int[8];
+
+
+        this.trader = new SockTrader(new ArrayList<Sock>(socks),id);
+
+        this.lastOffers = null;
     }
 
     @Override
@@ -44,34 +56,15 @@ public class Player extends exchange.sim.Player {
          * lastRequests.get(i)  -       Player i's request last round
          * lastTransactions     -       All completed transactions last round.
          */
-        if (isTransaction == true) {
-            current = 0;
-            centers = new double[4][3];
-            clusters = new int[socks.length];
-            K_means(10);
-            current = 1;
-            isTransaction = false;
-            chooseOffer();
-            return new Offer(socks[id_offer[0]], socks[id_offer[1]]);
-        }
-        else {
-            if (current == 0) {
-                current = 1;
-                return new Offer(socks[id_offer[0]], socks[id_offer[1]]);
-            }
-            else if (current == 1) {
-                current = 2;
-                return new Offer(socks[id_offer[2]], socks[id_offer[3]]);
-            }
-            else if (current == 2) {
-                current = 3;
-                return new Offer(socks[id_offer[4]], socks[id_offer[5]]);
-            }
-            else {
-                current = 0;
-                return new Offer(socks[id_offer[6]], socks[id_offer[7]]);
-            }
-        }
+
+        this.trader.updateInformation(toArrayList(socks));
+
+
+
+
+        return this.trader.makeOffer(lastRequests, lastTransactions);
+
+
     }
 
     @Override
@@ -86,79 +79,8 @@ public class Player extends exchange.sim.Player {
          * Remark: For Request object, rank ranges between 1 and 2
          */
 
-        List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); i++) {
-            if (i == id) continue;
-
-            // Encoding the offer information into integer: id * 2 + rank - 1
-            if (offers.get(i).getFirst() != null)
-                availableOffers.add(i * 2);
-            if (offers.get(i).getSecond() != null)
-                availableOffers.add(i * 2 + 1);
-        }
-
-        if (availableOffers.size() == 0)
-            return new Request(-1, -1, -1, -1);
-
-        int[] expect;
-        expect = new int[6];
-        if (current == 0) {
-            int j = 0;
-            for (int i = 0; i < 6; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
-                j++;
-            }
-        }
-        else if (current == 1) {
-            int j = 2;
-            for (int i = 0; i < 6; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
-                j++;
-            }
-        }
-        else if (current == 2) {
-            int j = 0;
-            for (int i = 0; i < 6; i++) {
-                if (j == 2) {
-                    j = j + 2;
-                }
-                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
-                j++;
-            }
-        }
-        else {
-            int j = 0;
-            for (int i = 0; i < 6; i++) {
-                if (j == 4) {
-                    j = j + 2;
-                }
-                expect[i] = chooseRequest(availableOffers, offers, id_offer[j], j);
-                j++;
-            }
-        }
-        for (int i = 0; i < 4; i++) {
-            for (int j = i + 1; j < 5; j++) {
-                if (expect[i] < expect[j]) {
-                    int temp = expect[i];
-                    expect[i] = expect[j];
-                    expect[j] = temp;
-                }
-            }
-        }
-
-        if (expect[0] == -1) {
-            if (expect[1] == -1) {
-                return new Request(-1, -1, -1, -1);
-            } else {
-                return new Request(expect[1] / 2, expect[1] % 2 + 1, -1, -1);
-            }
-        } else {
-            if (expect[1] == -1) {
-                return new Request(expect[0] / 2, expect[0] % 2 + 1, -1, -1);
-            } else {
-                return new Request(expect[0] / 2, expect[0] % 2 + 1, expect[1] / 2, expect[1] % 2 + 1);
-            }
-        }
+        this.lastOffers = offers;
+        return trader.requestExchange(offers);
     }
 
     @Override
@@ -200,12 +122,28 @@ public class Player extends exchange.sim.Player {
             else socks[id_offer[5]] = newSock;
         }
         isTransaction = true;
+
+        this.trader.updateInformation(toArrayList(socks));
+
     }
 
     @Override
     public List<Sock> getSocks() {
+
+        System.out.println("Getsocks for PLayer id: " +Integer.toString(id));
+
+        System.out.println("Sock list original: ");
+
+
+
+        this.trader.updateInformation(toArrayList(socks));
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
+
+      System.out.println(s);
+        System.out.println();
+
+
         if (socks.length > 200) {
             ans = SockHelper.getSocks(s);
         }
@@ -213,10 +151,21 @@ public class Player extends exchange.sim.Player {
             ans = SockArrangementFinder.getSocks(s);
         }
 
+        System.out.println("Sock list blossomed: ");
+
+          System.out.println(ans);
+
+
+        System.out.println();
         int minPrice = 0;
         for (int i = 0; i < ans.size() - 1; i += 2) {
             Sock s1 = ans.get(i);
             Sock s2 = ans.get(i + 1);
+
+            if(!s.contains(ans.get(i)) || !s.contains(ans.get(i+1)))
+            {
+              System.out.println("WTF at " + Integer.toString(i) + ": " + ans.get(i) + " "+ ans.get(i+1));
+            }
             Double dist = s1.distance(s2);
             minPrice += dist.intValue();
         }
@@ -312,6 +261,10 @@ public class Player extends exchange.sim.Player {
         maxDist[6] = maxThird[2]; maxDist[7] = maxThird[3];
     }
 
+    public ArrayList<Sock> toArrayList(Sock[] socks)
+    {
+      return new ArrayList<Sock>(Arrays.asList(socks));
+    }
     public int chooseRequest(List<Integer> availableOffers, List<Offer> offers, int identity, int num) {
         int n = availableOffers.size();
         double[] dist;
