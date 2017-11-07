@@ -34,7 +34,6 @@ public class Player extends exchange.sim.Player {
 
     private SockTrader trader;
     private List<Offer> lastOffers;
-    private ArrayList<Sock> prev_arrangement = null;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
@@ -110,7 +109,6 @@ public class Player extends exchange.sim.Player {
         if (rank == 1)
          socks[trader.sock_id1] = newSock;
         else socks[trader.sock_id2] = newSock;
-
         isTransaction = true;
 
         this.trader.updateInformation(toArrayList(this.socks));
@@ -130,43 +128,36 @@ public class Player extends exchange.sim.Player {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
 
-
-
-        if(isTransaction || prev_arrangement ==null)
-      {
-
+      System.out.println("Sock list original: ");
+      System.out.println(s);
         System.out.println();
-        System.out.println("Player g4:");
-        System.out.println("New arrangement");
-        System.out.println();
+
+
         if (socks.length > 200) {
             ans = SockHelper.getSocks(s);
         }
         else {
             ans = SockArrangementFinder.getSocks(s);
         }
-      }
-      else
-      {
-        ans = prev_arrangement;
-      }
 
-        // System.out.println("Sock list blossomed: ");
-        //
-        //   System.out.println(ans);
+        System.out.println("Sock list blossomed: ");
+
+          System.out.println(ans);
 
 
-        //System.out.println();
+        System.out.println();
         int minPrice = 0;
         for (int i = 0; i < ans.size() - 1; i += 2) {
             Sock s1 = ans.get(i);
             Sock s2 = ans.get(i + 1);
 
+            if(!s.contains(ans.get(i)) || !s.contains(ans.get(i+1)))
+            {
+              System.out.println("WTF at " + Integer.toString(i) + ": " + ans.get(i) + " "+ ans.get(i+1));
+            }
             Double dist = s1.distance(s2);
             minPrice += dist.intValue();
         }
-        prev_arrangement = ans;
-        isTransaction = false;
         return ans;
     }
 
