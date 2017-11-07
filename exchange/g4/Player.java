@@ -128,9 +128,9 @@ public class Player extends exchange.sim.Player {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
 
-      System.out.println("Sock list original: ");
-      System.out.println(s);
-        System.out.println();
+      // System.out.println("Sock list original: ");
+      // System.out.println(s);
+      //   System.out.println();
 
 
         if (socks.length > 200) {
@@ -140,9 +140,9 @@ public class Player extends exchange.sim.Player {
             ans = SockArrangementFinder.getSocks(s);
         }
 
-        System.out.println("Sock list blossomed: ");
-
-          System.out.println(ans);
+        // System.out.println("Sock list blossomed: ");
+        //
+        //   System.out.println(ans);
 
 
         System.out.println();
@@ -151,10 +151,6 @@ public class Player extends exchange.sim.Player {
             Sock s1 = ans.get(i);
             Sock s2 = ans.get(i + 1);
 
-            if(!s.contains(ans.get(i)) || !s.contains(ans.get(i+1)))
-            {
-              System.out.println("WTF at " + Integer.toString(i) + ": " + ans.get(i) + " "+ ans.get(i+1));
-            }
             Double dist = s1.distance(s2);
             minPrice += dist.intValue();
         }
