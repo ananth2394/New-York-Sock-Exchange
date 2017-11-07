@@ -8,8 +8,9 @@ import exchange.sim.Transaction;
 import exchange.sim.*;
 
 import exchange.g4.marketvalue.*;
-import exchange.g4.kdtree.*;
-
+import exchange.g4.SockHelper;
+//import exchange.g4.kdtree.SockHelper;
+import exchange.g4.edmonds.SockArrangementFinder;
 
 import java.util.*;
 import java.lang.Math;
@@ -93,7 +94,7 @@ public class SockTrader{
           }
 
       double mn = Double.MAX_VALUE;
-      Pair<Integer,Integer> mndex = new Pair<>(-1,-1);
+      Pair<Integer,Integer> mndex = new Pair<Integer,Integer>(-1,-1);
 
           int mxdex_i2 = -1;
           int mxdex_r2 = -1;
@@ -109,7 +110,7 @@ public class SockTrader{
                   Sock s = offers.get(i).getSock(j);
                   if(getRequestValue(s,exclude_list)<mn)
                   {
-                    mndex = new Pair<>(i,j);
+                    mndex = new Pair<Integer, Integer>((Integer)i,(Integer)j);
                     mn = getRequestValue(s,exclude_list);
                   }
                 }
@@ -124,7 +125,46 @@ public class SockTrader{
       public Double getRequestValue(Sock s,ArrayList <Sock> exclude_list)
       {
 
-        return getExternalMinDistance(s,exclude_list);
+          Double  coeff = 0.8;
+          Double embarrassment1 = -1.0;
+          Double embarrassment2 = -1.0;
+          ArrayList<Sock> newlist = new ArrayList<Sock>(this.socks);
+          ArrayList<Sock> arrangement = null;
+
+          if(this.sock_id1!=-1)
+          {
+            Sock temp = newlist.get(this.sock_id1);
+            newlist.set(this.sock_id1,new Sock(s));
+            arrangement= SockHelper.getSocks(newlist);
+
+            embarrassment1 = this.getTotalEmbarrasment(arrangement);
+
+            newlist.set(this.sock_id1,temp);
+          }
+
+          if(this.sock_id2!=-1)
+          {
+            Sock temp = newlist.get(this.sock_id2);
+            newlist.set(this.sock_id2,new Sock(s));
+            arrangement = SockHelper.getSocks(newlist);
+
+            embarrassment2 = this.getTotalEmbarrasment(arrangement);
+
+            newlist.set(this.sock_id2,temp);
+          }
+
+          if(embarrassment1<0)
+          {
+            return embarrassment2;
+          }
+          else if(embarrassment2 <0)
+          {
+            return embarrassment1;
+          }
+          else
+          {
+            return coeff*embarrassment1 + (1.0-coeff)*embarrassment2;
+          }
 
       }
       public void updateInformation(ArrayList<Sock> socks)
@@ -197,7 +237,7 @@ public class SockTrader{
 
               ArrayList<Double> minDistance= new ArrayList<Double>(Collections.nCopies(this.socks.size(),(Double)0.0));
               int n = socks.size();
-
+              Double coeff = 1.0;
               for(int i = 0;i<n;i++)
               {
                   int j = (i+1)%n;
@@ -218,7 +258,7 @@ public class SockTrader{
 
                   }
 
-                  minDistance.set(i,mn + market.getSockMarketValue(this.socks.get(i)));
+                  minDistance.set(i,coeff*mn + (1.0-coeff)*market.getSockMarketValue(this.socks.get(i)));
               }
 
               return minDistance;
@@ -261,18 +301,33 @@ public class SockTrader{
               return mxdex;
 
             }
+            public Double getTotalEmbarrasment(ArrayList<Sock> socks)
+            { Double embarrassment = 0.0;
+              for (int i = 0; i < socks.size() - 1; i += 2) {
 
+                  Sock s1 = socks.get(i);
+                  Sock s2 = socks.get(i + 1);
+
+                  Double dist = s1.distance(s2);
+                  embarrassment += dist.intValue();
+              }
+
+              return embarrassment;
+            }
             public Sock maxSock(ArrayList<Double> array)
             {
               int max_index = maxIndex(array);
-
+              if(max_index<0)
+                return null;
+              
               return this.socks.get(max_index);
             }
 
             public Sock maxSock(ArrayList<Double> array, ArrayList<Integer> exclude_list)
             {
               int max_index = maxIndex(array,exclude_list);
-
+              if(max_index<0)
+                return null;
               return this.socks.get(max_index);
             }
 
