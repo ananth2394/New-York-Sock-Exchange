@@ -47,12 +47,14 @@ public class MarketValue{
           continue;
           if (request.getFirstID() >= 0 && request.getFirstRank() >= 0) {
               Sock first = lastOffers.get(request.getFirstID()).getSock(request.getFirstRank());
-              updateLocation(first,maxdepth);
+              updateLocation(first);
+              //updateLocation(first,maxdepth);
           }
           if (request.getSecondID() >= 0 && request.getSecondRank() >= 0) {
               Sock second = lastOffers.get(request.getSecondID()).getSock(request.getSecondRank());
+              updateLocation(second);
               //marketValue[second.R / 32][second.G / 32][second.B / 32] += Math.pow(totalTurns - currentTurn, 2);
-              updateLocation(second, maxdepth);
+              //updateLocation(second, maxdepth);
           }
 
 
@@ -65,11 +67,7 @@ public class MarketValue{
     if(s==null)
       return;
 
-    int R = s.R;
-    int G = s.G;
-    int B = s.B;
-
-    mval[R][G][B] += eps;
+    updateLocation(s,this.eps);
   }
   public void updateLocation(Sock s, double eps)
   {
@@ -77,9 +75,9 @@ public class MarketValue{
       return;
 
 
-    int R = s.R;
-    int G = s.G;
-    int B = s.B;
+    int R = s.R/16;
+    int G = s.G/16;
+    int B = s.B/16;
 
     mval[R][G][B] += eps;
   }
@@ -120,7 +118,7 @@ public class MarketValue{
       return -1;
 
 
-    return mval[s.R][s.G][s.B];
+    return mval[s.R/16][s.G/16][s.B/16];
   }
   public Offer makeOffer(ArrayList<Sock> socks)
   {
@@ -267,42 +265,5 @@ public ArrayList<Sock> getNeighbhours(Sock s)
 }
 
 
-  // public void updateLocation(Sock s, int maxdepth)
-  // {
-  //   HashMap<Sock,Integer> dist = new HashMap<Sock, Integer>();
-  //   Set<Sock> sockSet = new HashSet<Sock>();
-  //   Queue<Sock> q = new Queue<s>;
-  //
-  //   q.add(s);
-  //   dist.set(s,0);
-  //   sockSet.add(s);
-  //
-  //   while(q.size() >0 )
-  //   {
-  //     Sock t = q.poll();
-  //     updateLocation(t,eps * Math.exp(-0.5*dist.get));
-  //     if(dist.get(t) > maxdepth)
-  //     {
-  //
-  //     }
-  //     ArrayList<Sock> nebs = getNeighbhours(t);
-  //
-  //     for(Sock n : nebs)
-  //     {
-  //       if(!sockSet.consists(n))
-  //       {
-  //         q.add(n);
-  //         sockSet.add(n);
-  //         dist.set(n,dist.get(t)+1);
-  //       }
-  //     }
-  //
-  //
-  //
-  //   }
-  //
-  //
-  //
-  // }
 
 }
