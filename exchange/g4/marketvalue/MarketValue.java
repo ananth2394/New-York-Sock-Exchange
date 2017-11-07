@@ -12,7 +12,7 @@ import javafx.util.*;
 public class MarketValue{
 
   public double [][][] mval; // Higher value means market values sock more
-  public double eps = 10;
+  public double eps = 30;
   public int id;
   public int maxdepth = 5;
   public MarketValue(int id)
@@ -96,7 +96,7 @@ public class MarketValue{
           if(0<=r && r<=255 && 0<=g && g<=255 && 0<=b && b<=255)
           {
             //double val = eps * Math.exp(-s.distance(new Sock(r,g,b)));
-            double val = eps*(1.0/s.distance(new Sock(r,g,b)));
+            double val = Math.max(0.0,eps - s.distance(new Sock(r,g,b)) );
 
             updateLocation(s,val);
 
