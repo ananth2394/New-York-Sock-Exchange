@@ -22,6 +22,8 @@ public class SockTrader{
       public MarketValue market = null;
       public int player_id = -1;
       public ArrayList<Double> minDistance = null;
+      public int sock_id1 = -1;
+      public int sock_id2 = -1;
 
       public SockTrader(ArrayList<Sock> socks, int id)
       {
@@ -34,10 +36,13 @@ public class SockTrader{
 
       public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions){
 
-        market.updateMarket(lastRequests,lastTransactions,this.lastOffers); //Not used right now
+        if(this.lastOffers!=null)
+          market.updateMarket(lastRequests,lastTransactions,this.lastOffers); //Not used right now
 
         this.minDistance = computeDistanceArray();
+        this.sock_id1 = maxIndex(minDistance);
 
+        
         Sock offer_sock = maxSock(minDistance);
 
         return new Offer(offer_sock,null);
