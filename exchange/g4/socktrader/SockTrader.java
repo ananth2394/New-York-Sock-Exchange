@@ -23,36 +23,40 @@ public class SockTrader{
       public MarketValue market = null;
       public int player_id = -1;
       public ArrayList<Double> minDistance = null;
-      public int sock_id1 = -1;
-      public int sock_id2 = -1;
+      public int sock_id[];
 
       public SockTrader(ArrayList<Sock> socks, int id)
       {
         this.socks = socks;
         this.player_id = id;
         this.market = new MarketValue(this.player_id,20);
+        this.sock_id = new int[8];
+        for (int i = 0; i < 8; i++) {
+            sock_id[i] = -1;
+        }
 
       }
 
 
-      public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions){
+      public void makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions){
 
         if(this.lastOffers!=null)
           market.updateMarket(lastRequests,lastTransactions,this.lastOffers); //Not used right now
 
         this.minDistance = computeDistanceArray();
 
-
-        this.sock_id1 = maxIndex(minDistance);
-        Sock offer_sock_1 = maxSock(minDistance);
+        this.sock_id[0] = maxIndex(minDistance);
 
         ArrayList<Integer> exclude_list = new ArrayList<Integer>();
-        exclude_list.add((Integer)this.sock_id1);
-
-        this.sock_id2 = maxIndex(minDistance,exclude_list);
-        Sock offer_sock_2 = maxSock(minDistance,exclude_list);
-
-        return new Offer(offer_sock_1,offer_sock_2);
+        exclude_list.add((Integer)this.sock_id[0]);
+        
+        for (int i = 1; i < 7; i++) {
+            this.sock_id[i] = maxIndex(minDistance,exclude_list);
+            exclude_list.add((Integer)this.sock_id[i]);
+        }
+        this.sock_id[7] = maxIndex(minDistance,exclude_list);
+        
+        return;
 
       }
 
@@ -131,26 +135,26 @@ public class SockTrader{
           ArrayList<Sock> newlist = new ArrayList<Sock>(this.socks);
           ArrayList<Sock> arrangement = null;
 
-          if(this.sock_id1!=-1)
+          if(this.sock_id[0]!=-1)
           {
-            Sock temp = newlist.get(this.sock_id1);
-            newlist.set(this.sock_id1,new Sock(s));
+            Sock temp = newlist.get(this.sock_id[0]);
+            newlist.set(this.sock_id[0],new Sock(s));
             arrangement= SockHelper.getSocks(newlist);
 
             embarrassment1 = this.getTotalEmbarrasment(arrangement);
 
-            newlist.set(this.sock_id1,temp);
+            newlist.set(this.sock_id[0],temp);
           }
 
-          if(this.sock_id2!=-1)
+          if(this.sock_id[1]!=-1)
           {
-            Sock temp = newlist.get(this.sock_id2);
-            newlist.set(this.sock_id2,new Sock(s));
+            Sock temp = newlist.get(this.sock_id[1]);
+            newlist.set(this.sock_id[1],new Sock(s));
             arrangement = SockHelper.getSocks(newlist);
 
             embarrassment2 = this.getTotalEmbarrasment(arrangement);
 
-            newlist.set(this.sock_id2,temp);
+            newlist.set(this.sock_id[1],temp);
           }
 
           if(embarrassment1<0)
