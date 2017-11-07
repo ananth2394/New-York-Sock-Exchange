@@ -130,12 +130,16 @@ public class Player extends exchange.sim.Player {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
 
-      // System.out.println("Sock list original: ");
-      // System.out.println(s);
-      //   System.out.println();
+
 
         if(isTransaction || prev_arrangement ==null)
-      {  if (socks.length > 200) {
+      {
+
+        System.out.println();
+        System.out.println("Player g4:");
+        System.out.println("New arrangement");
+        System.out.println();
+        if (socks.length > 200) {
             ans = SockHelper.getSocks(s);
         }
         else {
@@ -162,6 +166,7 @@ public class Player extends exchange.sim.Player {
             minPrice += dist.intValue();
         }
         prev_arrangement = ans;
+        isTransaction = false;
         return ans;
     }
 
