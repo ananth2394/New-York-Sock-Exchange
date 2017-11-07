@@ -57,7 +57,7 @@ public class Player extends exchange.sim.Player {
          * lastTransactions     -       All completed transactions last round.
          */
 
-        this.trader.updateInformation(toArrayList(socks));
+        this.trader.updateInformation(toArrayList(this.socks));
 
 
 
@@ -78,7 +78,7 @@ public class Player extends exchange.sim.Player {
          *
          * Remark: For Request object, rank ranges between 1 and 2
          */
-
+         this.trader.updateInformation(toArrayList(socks));
         this.lastOffers = offers;
         return trader.requestExchange(offers);
     }
@@ -105,25 +105,13 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (current == 0) {
-            if (rank == 1) socks[id_offer[6]] = newSock;
-            else socks[id_offer[7]] = newSock;
-        }
-        else if (current == 1) {
-            if (rank == 1) socks[id_offer[0]] = newSock;
-            else socks[id_offer[1]] = newSock;
-        }
-        else if (current == 2) {
-            if (rank == 1) socks[id_offer[2]] = newSock;
-            else socks[id_offer[3]] = newSock;
-        }
-        else {
-            if (rank == 1) socks[id_offer[4]] = newSock;
-            else socks[id_offer[5]] = newSock;
-        }
+
+        if (rank == 1)
+         socks[trader.sock_id1] = newSock;
+        else socks[trader.sock_id2] = newSock;
         isTransaction = true;
 
-        this.trader.updateInformation(toArrayList(socks));
+        this.trader.updateInformation(toArrayList(this.socks));
 
     }
 
@@ -132,7 +120,7 @@ public class Player extends exchange.sim.Player {
 
         System.out.println("Getsocks for PLayer id: " +Integer.toString(id));
 
-        System.out.println("Sock list original: ");
+
 
 
 
@@ -140,6 +128,7 @@ public class Player extends exchange.sim.Player {
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
 
+      System.out.println("Sock list original: ");
       System.out.println(s);
         System.out.println();
 
