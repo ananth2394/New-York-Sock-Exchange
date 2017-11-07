@@ -1,0 +1,1 @@
+Added the market value
