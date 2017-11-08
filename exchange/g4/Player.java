@@ -95,23 +95,39 @@ public class Player extends exchange.sim.Player {
          * Remark: For Request object, rank ranges between 1 and 2
          */
         
-        if (socks.length > 600) {
-            this.trader.updateInformation(toArrayList(socks));
-            this.lastOffers = offers;
-            return trader.requestExchange(offers);
-        }
-        
         List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); i++) {
+        for (int i = 0; i < offers.size(); ++i) {
             if (i == id) continue;
 
-            // Encoding the offer information into integer: id * 2 + rank - 1
             if (offers.get(i).getFirst() != null)
                 availableOffers.add(i * 2);
             if (offers.get(i).getSecond() != null)
                 availableOffers.add(i * 2 + 1);
         }
 
+        if (socks.length > 800) {
+            if (availableOffers.size() == 0) {
+                return new Request(-1, -1, -1, -1);
+            }
+            else if (availableOffers.size() == 1) {
+                int k = availableOffers.get(random.nextInt(availableOffers.size()));
+                return new Request(k / 2, k % 2 + 1, -1, -1);
+            }
+            else {
+                int k1 = availableOffers.get(random.nextInt(availableOffers.size()));
+                int k2 = availableOffers.get(random.nextInt(availableOffers.size()));
+                while (k1 == k2)
+                    k2 = availableOffers.get(random.nextInt(availableOffers.size()));
+                return new Request(k1 / 2, k1 % 2 + 1, k2 / 2, k2 % 2 + 1);
+            }
+        }
+        
+        /*if (socks.length > 1000) {
+            this.trader.updateInformation(toArrayList(socks));
+            this.lastOffers = offers;
+            return trader.requestExchange(offers);
+        }*/
+        
         if (availableOffers.size() == 0)
             return new Request(-1, -1, -1, -1);
         int[] expect;
@@ -214,7 +230,7 @@ public class Player extends exchange.sim.Player {
         //System.out.println(s);
         //System.out.println();
 
-        if (socks.length > 600) {
+        if (socks.length > 400) {
             ans = SockHelper.getSocks(s);
         }
         else {
