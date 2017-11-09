@@ -1,96 +1,98 @@
 package exchange.g3;
 
-import exchange.sim.Offer;
-import exchange.sim.Request;
-import exchange.sim.Sock;
-import exchange.sim.Transaction;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import exchange.sim.*;
 
 public class Player extends exchange.sim.Player {
     /*
         Inherited from exchange.sim.Player:
-
         Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
-    private int id1, id2, id;
-    private Sock[] socks;
+    private int id;
+    private Sock s1, s2;
     private SockCollection socksCollection;
-    private int turn = -1;
+    private int turn;
+    private int timeSinceTransaction = 0;
+    private boolean transactionOccurred = false;
 
     private RoundCollection rounds;
+    private int timeSinceRequest;
 
     @Override
     public void init(int id, int n, int p, int t, List<Sock> socks) {
         this.id = id;
-        this.socks = socks.toArray(new Sock[2 * n]);
-        this.socksCollection = new SockCollection(this.socks);
+        this.turn = t;
+        this.socksCollection = new SockCollection(socks, id);
         this.rounds = new RoundCollection();
     }
-
 
     @Override
     public Offer makeOffer(List<Request> lastRequests, List<Transaction> lastTransactions) {
         /*
-            lastRequests.get(i)		-		Player i's request last round
+			lastRequests.get(i)		-		Player i's request last round
 			lastTransactions		-		All completed transactions last round.
 		 */
 
-        // Tracks the current turn number.
-        this.turn += 1;
+        // Tracks number of turns left.
+        this.turn -= 1;
+
+        if (!transactionOccurred) {
+            ++timeSinceTransaction;
+        }
+
+        transactionOccurred = false;
+
+        if (timeSinceTransaction > 2) {
+            // keep in mind that just because we are picky
+            // does not mean that other players are also picky
+            // resolve when we take other players transac history
+
+            this.socksCollection.shuffle(true);
+            timeSinceTransaction = 0;
+        }
+
+        if (timeSinceRequest > 5) { //if we are too picky
+            // keep in mind that just because we are picky
+            // does not mean that other players are also picky
+            // resolve when we take other players transac history
+            this.socksCollection.shuffle(false);
+            timeSinceRequest = 0;
+        }
 
         rounds.putTransactionInfo(lastRequests, lastTransactions);
 
-        int[] worstPairIds = this.socksCollection.getWorstPairIds();
-        this.id1 = worstPairIds[0];
-        this.id2 = worstPairIds[1];
-        return new Offer(
-                this.socksCollection.getSock(this.id1),
-                this.socksCollection.getSock(this.id2));
+        Sock[] worstPairSocks = this.socksCollection.getWorstPairSocks();
+        this.s1 = worstPairSocks[0];
+        this.s2 = worstPairSocks[1];
+        return new Offer(s1, s2);
     }
 
     @Override
     public Request requestExchange(List<Offer> offers) {
-        /*
+		/*
 			offers.get(i)			-		Player i's offer
 			For each offer:
 			offer.getSock(rank = 1, 2)		-		get rank's offer
 			offer.getFirst()				-		equivalent to offer.getSock(1)
 			offer.getSecond()				-		equivalent to offer.getSock(2)
-
 			Remark: For Request object, rank ranges between 1 and 2
 		 */
 
         rounds.putOfferInfo(offers);
+        //Keep track of # of our own requests
+        //Increase threshold when # > 5 inside SockCollection
 
-        List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); ++i) {
-            if (i == id) continue;
-
-            // Encoding the offer information into integer: id * 2 + rank - 1
-            if (offers.get(i).getFirst() != null)
-                availableOffers.add(i * 2);
-            if (offers.get(i).getSecond() != null)
-                availableOffers.add(i * 2 + 1);
-        }
-
-        int test = random.nextInt(3);
-        if (test == 0 || availableOffers.size() == 0) {
-            // In Request object, id == -1 means no request.
-            return new Request(-1, -1, -1, -1);
-        } else if (test == 1 || availableOffers.size() == 1) {
-            // Making random requests
-            int k = availableOffers.get(random.nextInt(availableOffers.size()));
-            return new Request(k / 2, k % 2 + 1, -1, -1);
+        Request currentOffer = socksCollection.requestBestOffer(offers);
+        if (currentOffer.getFirstID() == -1 && currentOffer.getSecondID() ==-1) {
+            timeSinceRequest++;
         } else {
-            int k1 = availableOffers.get(random.nextInt(availableOffers.size()));
-            int k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-            while (k1 == k2)
-                k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-            return new Request(k1 / 2, k1 % 2 + 1, k2 / 2, k2 % 2 + 1);
+            timeSinceRequest = 0;
         }
+
+        return currentOffer;
     }
 
     @Override
@@ -102,9 +104,12 @@ public class Player extends exchange.sim.Player {
             transaction.getSecondRank()     -       Similar as above
             transaction.getFirstSock()      -       Sock offered by the first player
             transaction.getSecondSock()     -       Similar as above
-
             Remark: rank ranges between 1 and 2
          */
+
+        //figure out which sock we are replacing and
+        //moving it into our kept set
+
         int rank;
         Sock newSock;
         if (transaction.getFirstID() == id) {
@@ -114,18 +119,31 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socksCollection.putSock(id1, newSock);
-        else socksCollection.putSock(id2, newSock);
+        //remove the sock we are getting rid of aka s1
+        //find its pair and move it to good and shift pivot
+        if (rank == 1) {
+            socksCollection.putSock(s1, newSock);
+        }
+        else {
+            socksCollection.putSock(s2, newSock);
+        }
+
+        transactionOccurred = true;
+        timeSinceTransaction = 0;
     }
 
     @Override
     public List<Sock> getSocks() {
-        return socksCollection.getCollection();
+        boolean rePair = false;
+        if (turn <= 1) {
+            rePair = true;
+        }
+
+        return socksCollection.getCollection(rePair);
     }
 }
 
 // Maintains information of all the rounds.
-// - Need to implement a KB for gathering info.
 class RoundCollection {
     private List<Round> roundsInfo;
     private int turn = -1;

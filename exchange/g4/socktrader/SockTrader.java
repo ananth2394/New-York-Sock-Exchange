@@ -241,7 +241,16 @@ public class SockTrader{
 
               ArrayList<Double> minDistance= new ArrayList<Double>(Collections.nCopies(this.socks.size(),(Double)0.0));
               int n = socks.size();
-              Double coeff = 1.0;
+              Double coeff = 0.5;
+              if(n==10){
+                  coeff = 0.3;
+              }
+              if(n==20){
+                  coeff = 0.5;
+              }
+              if(n==100){
+                  coeff = 0.8;
+              }
               for(int i = 0;i<n;i++)
               {
                   int j = (i+1)%n;
