@@ -124,6 +124,8 @@ public class Simulator {
                     players[i].setIllegal(true);
                     requests[i] = new Request(-1, -1, -1, -1);
                 }
+                if (requests[i].getFirstID() == requests[i].getSecondID() && requests[i].getFirstRank() == requests[i].getSecondRank())
+                    requests[i] = new Request(requests[i].getFirstID(), requests[i].getFirstRank(), -1, -1);
                 if (!silent) System.out.println(players[i].getName() + "(" + i + ") requesting " + requests[i]);
             }
 
@@ -179,7 +181,14 @@ public class Simulator {
         }
 
         for (int i = 0; i < p; ++i) {
-            if (players[i].isActive()) totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
+            //if (players[i].isActive()) totalEmbarrassments[i] = players[i].getTotalEmbarrassment();
+            try {
+                totalEmbarrassments[i] = players[i].finalCall();
+            } catch (Exception e) {
+                StringWriter errors = new StringWriter();
+                e.printStackTrace(new PrintWriter(errors));
+                System.err.println(errors.toString());
+            }
             System.out.println("Total embarrassment for " + players[i].getName() + " is initially " + initialEmbarrassments[i] + " and finally " + totalEmbarrassments[i]);
         }
         if (gui) gui(server, state(fps, t, null, null, null, totalEmbarrassments));

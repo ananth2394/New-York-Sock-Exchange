@@ -3,10 +3,10 @@
 // Javascript reference: https://github.com/mattkrick/EdmondsBlossom
 package exchange.g5;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 public class Blossom {
     private static final boolean CHECK_DELTA = false;
@@ -34,6 +34,26 @@ public class Blossom {
     private final int[] dualvar;
     private final boolean[] allowedge;
     private final List<Integer> queue;
+
+    private static int[][] getIntEdges(float[][] edges) {
+        // Convert float edge weights to integers
+        int[][] result = new int[edges.length][];
+        // find best scaling value
+        int safeScaleValue = Integer.MAX_VALUE;
+        for (float[] edge : edges) {
+            safeScaleValue = Math.min(safeScaleValue, (int) Math.floor(Integer.MAX_VALUE / Math.abs(edge[2])));
+        }
+        safeScaleValue = (int) Math.pow(10, Integer.toString(safeScaleValue).length() - 1d);
+
+        // convert floats to integers
+        for (int i = 0; i < edges.length; i++) {
+            float[] edge = edges[i];
+            assert Float.floatToIntBits(edge[0]) == Float.floatToIntBits(Math.round(edge[0]));
+            assert Float.floatToIntBits(edge[1]) == Float.floatToIntBits(Math.round(edge[1]));
+            result[i] = new int[]{(int) edge[0], (int) edge[1], (int) (safeScaleValue * edge[2])};
+        }
+        return result;
+    }
 
     public Blossom(float[][] edges, boolean maxcardinality) {
 //    	System.out.println("Inside Blossom");
@@ -89,7 +109,7 @@ public class Blossom {
 
         // If v is a vertex,
         // neighbend[v] is the list of remote endpoints of the edges attached to v.
-        // Not modified by the algorithm.
+        // Not modified by the algorithm. 
         List<Integer>[] neighbend = new ArrayList[nvertex];
         for (int i = 0; i < neighbend.length; i++) {
             neighbend[i] = new ArrayList<Integer>();
@@ -219,26 +239,6 @@ public class Blossom {
         this.queue = queue;
     }
 
-    private static int[][] getIntEdges(float[][] edges) {
-        // Convert float edge weights to integers
-        int[][] result = new int[edges.length][];
-        // find best scaling value
-        int safeScaleValue = Integer.MAX_VALUE;
-        for (float[] edge : edges) {
-            safeScaleValue = Math.min(safeScaleValue, (int) Math.floor(Integer.MAX_VALUE / Math.abs(edge[2])));
-        }
-        safeScaleValue = (int) Math.pow(10, Integer.toString(safeScaleValue).length() - 1d);
-
-        // convert floats to integers
-        for (int i = 0; i < edges.length; i++) {
-            float[] edge = edges[i];
-            assert Float.floatToIntBits(edge[0]) == Float.floatToIntBits(Math.round(edge[0]));
-            assert Float.floatToIntBits(edge[1]) == Float.floatToIntBits(Math.round(edge[1]));
-            result[i] = new int[]{(int) edge[0], (int) edge[1], (int) (safeScaleValue * edge[2])};
-        }
-        return result;
-    }
-
     // Return 2 * slack of edge k (does not work inside blossoms).
     private long slack(int k) {
         int[] edge = edges[k];
@@ -349,7 +349,7 @@ public class Blossom {
         int bv = inblossom[v];
         int bw = inblossom[w];
         // Create blossom.
-        int b = unusedblossoms.remove(unusedblossoms.size() - 1);
+        int b = unusedblossoms.remove(unusedblossoms.size()-1);
         if (DEBUG) {
             System.out.println("addBlossom(" + base + "," + k + ") (v=" + v + " w=" + w + ") -> " + b);
         }
@@ -450,7 +450,7 @@ public class Blossom {
             }
         }
         blossombestedges[b] = new int[buffer.size()];
-        for (int i = 0; i < buffer.size(); i++) {
+        for (int i = 0; i< buffer.size(); i++) {
             blossombestedges[b][i] = buffer.get(i).intValue();
         }
         // Select bestedge[b].

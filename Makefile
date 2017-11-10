@@ -1,5 +1,5 @@
 all:
-	java exchange.sim.Simulator -p g1 g2 g3 g4 g5 g6 -t 100 -n 100 --silent
+	java exchange.sim.Simulator -p6 g6 -t 30 -n 10 --seed 20171108
 
 compile:
 	javac exchange/sim/*.java

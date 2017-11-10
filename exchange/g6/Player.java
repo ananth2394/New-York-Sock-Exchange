@@ -1,36 +1,46 @@
 package exchange.g6;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.*;
+
 import exchange.sim.Offer;
 import exchange.sim.Request;
 import exchange.sim.Sock;
 import exchange.sim.Transaction;
 
-import java.util.*;
-
 public class Player extends exchange.sim.Player {
     /*
         Inherited from exchange.sim.Player:
         Random random   -       Random number generator, if you need it
-
         Remark: you have to manually adjust the order of socks, to minimize the total embarrassment
                 the score is calculated based on your returned list of getSocks(). Simulator will pair up socks 0-1, 2-3, 4-5, etc.
      */
-    private int id1, id2, id, n;
+    private int id1, id2, id, n, t;
     private Sock[] socks;
     private Sock median;
+
     private double max_dist1;//for stage 0 
     private double max_dist2;//for stage 0
-    private int no_txn = 0; //count the number times with no txns 
-    private int pair_offer = 0; //identify stages: pair_offer = 1 for stage1
+    private int no_txn; //count the number times with no txns 
+    private int pair_offer; //identify stages: pair_offer = 1 for stage1
 
-    private double dist = 70;
-    private ArrayList<Sock> median_list;
-
-    private int num_cluster;
     private boolean txn = true;
 
-    private int t;
-    private int t_counter;
+    private double minEmbarassment = Double.MAX_VALUE;
+    private double embarrassment = Double.MAX_VALUE;
+    private int improvementCounter;
+
+    private List<Offer> lastOffers;
+    private Set<Sock> lastTradedSocks;
+    private HashMap<Sock, Integer> lastUnfulfilledRequests;
+
+    private Request lastRequest;
+    private Pair[] pairs;
+
+    private int playerCloseToOffer;
+    private Set<Integer> playersWithInterest = new HashSet<Integer>();
 
 
     @Override
@@ -38,13 +48,17 @@ public class Player extends exchange.sim.Player {
         this.id = id;
         this.n = n;
         this.socks = (Sock[]) socks.toArray(new Sock[2 * n]);
-        this.median = new Sock(128, 128, 128);
-        this.median_list = new ArrayList<Sock>();
+        this.median = new Sock(128,128,128);
         this.max_dist1 = -1;
         this.max_dist2 = -1;
         this.t = t;
-        this.t_counter = 0;
-        this.num_cluster = 4;
+        this.pairs = new Pair[n];
+        this.pairSocks();
+
+        lastOffers = null;
+        lastTradedSocks = new HashSet<Sock>();
+        lastUnfulfilledRequests = new HashMap<Sock, Integer>();
+        playersWithInterest = new HashSet<Integer>();
     }
 
     @Override
@@ -52,114 +66,190 @@ public class Player extends exchange.sim.Player {
         /*
             lastRequests.get(i)     -       Player i's request last round
             lastTransactions        -       All completed transactions last round.
-         */
-        //increment no_txn
-        //this.t -= 1;
-        this.t_counter += 1;
-        this.no_txn += 1;
-        //if stage 0
-        if (this.no_txn <= 4) {
-            //Use Blossom method to pair up socks
-            if (this.txn == true) {
-                this.median_list.clear();
-                socks = pairSocks(socks);
-                this.txn = false;
+        */
 
 
-                ArrayList<Sock> arrayList_socks = new ArrayList<Sock>(Arrays.asList(socks));
-                DBSCANClusterer clusterer = new DBSCANClusterer(arrayList_socks, 2, this.dist);
-                ArrayList<ArrayList<Sock>> result = clusterer.performClustering();
-                while (result.size() < this.num_cluster) {
-                    this.dist = this.dist - 5;
-                    clusterer = new DBSCANClusterer(arrayList_socks, 2, this.dist);
-                    result = clusterer.performClustering();
+        /*
+        if(t % 3 == 0) {
+            this.lastUnfulfilledRequests.clear();
+        }
+        */
+
+        playersWithInterest.clear();
+        Set<Integer> interestingPlayers = new HashSet<Integer>();
+        playerCloseToOffer = -2;
+
+
+        boolean obtainedFirstSock = false;
+        boolean obtainedSecondSock = false;
+
+        this.lastTradedSocks.clear();
+        for(Transaction t : lastTransactions) {
+            lastTradedSocks.add(t.getFirstSock());
+            lastTradedSocks.add(t.getSecondSock());
+        }
+
+        this.lastUnfulfilledRequests.clear();
+        for(int i = 0; i < lastRequests.size(); i++) {
+            Request r = lastRequests.get(i);
+
+            if(i == id) {
+                if(!this.txn) {
+                    interestingPlayers.add(lastRequests.get(id).getFirstID());
+                    interestingPlayers.add(lastRequests.get(id).getSecondID());
                 }
-
-                //System.out.println("clusters: " + result.size());
-                HashMap<Sock, Double> offerCandidate = new HashMap<Sock, Double>();
-                double furthest_dist = -1;
-                for (int i = 0; i < result.size(); ++i) {
-                    Sock tmp_median = getMedianSock(result.get(i));
-                    median_list.add(tmp_median);
-                    double candidate_dist1 = -1;
-                    double candidate_dist2 = -1;
-                    Sock candidate1 = result.get(i).get(0);
-                    Sock candidate2 = result.get(i).get(1);
-                    for (int j = 0; j < result.get(i).size(); j++) {
-                        if (tmp_median.distance(result.get(i).get(j)) > candidate_dist1) {
-                            candidate_dist2 = candidate_dist1;
-                            candidate_dist1 = tmp_median.distance(result.get(i).get(j));
-                            candidate2 = candidate1;
-                            candidate1 = result.get(i).get(j);
-                        } else if (tmp_median.distance(result.get(i).get(j)) > candidate_dist2) {
-                            candidate_dist2 = tmp_median.distance(result.get(i).get(j));
-                            candidate2 = result.get(i).get(j);
+            } else if(r == null) {
+                continue; 
+            } else {
+                if(r.getFirstID() != -1 && r.getFirstRank() != -1) {
+                    Sock firstSock = lastOffers.get(r.getFirstID()).getSock(r.getFirstRank());
+                    if(!lastTradedSocks.contains(firstSock)) {
+                        if(r.getFirstID() == id && !lastTradedSocks.contains(firstSock)) {
+                            playersWithInterest.add(i);
                         }
-                    }
-                    offerCandidate.put(candidate1, candidate_dist1);
-                    offerCandidate.put(candidate2, candidate_dist2);
-                    // for(int p = 0; p < result.get(i).size()-1; p++){
-                    //     for (int q = p; q < result.get(i).size(); q++){
-                    //         if(result.get(i).get(p).distance(result.get(i).get(q)) > furthest_dist){
-                    //             furthest_dist = result.get(i).get(p).distance(result.get(i).get(q));
-                    //         }
-                    //     }
-                    // }
-
-                }
-
-                this.max_dist1 = -1;
-                this.max_dist2 = -1;
-                int maxid1 = -1;
-                int maxid2 = -1;
-                //System.out.println(offerCandidate);
-                for (Sock s : offerCandidate.keySet()) {
-                    if (offerCandidate.get(s) > this.max_dist1) {
-                        this.max_dist2 = this.max_dist1;
-                        this.max_dist1 = offerCandidate.get(s);
-                        maxid2 = maxid1;
-                        maxid1 = arrayList_socks.indexOf(s);
-                    } else if (offerCandidate.get(s) > this.max_dist2) {
-                        this.max_dist2 = offerCandidate.get(s);
-                        maxid2 = arrayList_socks.indexOf(s);
+                        lastUnfulfilledRequests.put(firstSock, i);
+                    } else {
+                        lastUnfulfilledRequests.remove(firstSock);
                     }
                 }
-                this.dist = this.max_dist1 * 2;
 
-                this.id1 = maxid1;
-                this.id2 = maxid2;
-            }//if txn == true
+                if(r.getSecondID() != -1 && r.getSecondRank() != -1) {
+                    Sock secondSock = lastOffers.get(r.getSecondID()).getSock(r.getSecondRank());
+                    if(!lastTradedSocks.contains(secondSock)) {
+                        if(r.getSecondID() == id && !lastTradedSocks.contains(secondSock)) {
+                            playersWithInterest.add(i);
+                        }
+                        lastUnfulfilledRequests.put(secondSock, i);
+                    } else {
+                        lastUnfulfilledRequests.remove(secondSock);
+                    }
+                }
+            }
+        }
+
+        this.t--;
+        if(!this.txn) {
+            this.no_txn++;
+        } else {
+            this.pairSocks();
+            this.embarrassment = getEmbarassment(socks);
+            if(this.embarrassment < this.minEmbarassment) {
+                this.minEmbarassment = this.embarrassment;
+            }
+        }
+
+        if(this.no_txn % 3 != 2) {
+            //Use Blossom method to pair up socks
+            
+            double minDist1 = 1000;
+            int minTimesOffered = 1000;
+            int minId1 = -1;
+
+            for(int i = Math.max(0, pairs.length - 1 - this.no_txn); i < pairs.length; i++) {
+                for(Sock s : lastUnfulfilledRequests.keySet()) {
+
+                    if(s.distance(pairs[i].u) == 0 || s.distance(pairs[i].v) == 0 || s.distance(pairs[i].u) + s.distance(pairs[i].v) < minDist1 && pairs[i].timesOffered <= minTimesOffered) {
+                        playerCloseToOffer = lastUnfulfilledRequests.get(s);
+                        minId1 = 2*i;
+                        minDist1 = s.distance(pairs[i].u) + s.distance(pairs[i].v);
+                        minTimesOffered = pairs[i].timesOffered;
+                    }
+                }
+            }
+          
+
+            /*
+            double minDist1 = 1000;
+            int minTimesOffered1 = 1000;
+            int minId1 = -1;
+
+            double minDist2 = 1000;
+            int minTimesOffered2 = 1000;
+            int minId2 = -1;
+
+            for(int i = pairs.length - 5; i < pairs.length; i++) {
+                for(Sock s : lastUnfulfilledRequests) {
+                    if(s.distance(pairs[i].u) < minDist1) {
+                        minId2 = minId1;
+                        minDist2 = minDist1;
+                        minTimesOffered2 = minTimesOffered1;
+                        minId1 =  2*i;
+                        minDist1 = s.distance(pairs[i].u);
+                        minTimesOffered1 = pairs[i].timesOffered;
+                    } else if(s.distance(pairs[i].u) < minDist2) {
+                        minId2 = 2*i;
+                        minDist2 = s.distance(pairs[i].u);
+                        minTimesOffered2 = pairs[i].timesOffered;
+                    }
+
+                    if(s.distance(pairs[i].v) < minDist1) {
+                        minId2 = minId1;
+                        minDist2 = minDist1;
+                        minTimesOffered2 = minTimesOffered1;
+                        minId1 = 2*i + 1;
+                        minDist1 = s.distance(pairs[i].v);
+                        minTimesOffered1 = pairs[i].timesOffered;
+                    } else if(s.distance(pairs[i].v) < minDist2) {
+                        minId2 =  2*i + 1;
+                        minDist2 = s.distance(pairs[i].v);
+                        minTimesOffered2 = pairs[i].timesOffered;
+                    }
+                }
+            }
+            */
+            if(minId1 >= 0) {
+                pairs[minId1/2].timesOffered++;
+                //pairs[minId2/2].timesOffered++;
+
+                this.id1 = minId1;
+                this.id2 = minId1 + 1;
+            } else {
+                this.id1 = (socks.length - Math.abs(this.no_txn/2)*2 - 1) % socks.length;
+                this.id2 = (socks.length - Math.abs(this.no_txn/2)*2 - 2) % socks.length;
+            }
+
             this.pair_offer = 0; //this is stage 0, so pair_offer == 0;
 
-            //return the offer with two farthest socks
-            return new Offer(socks[this.id1], socks[this.id2]);
-        } else {//this is stage 1
-            //get the pairs of socks backwards from the socks list.
-            //when no_txn = 6,7,8,9 we have the last pair
-            //when no_txn = 10,11,12,13,14 we have the second last pair.
-            this.id1 = socks.length - ((this.no_txn - 3) / 3) * 2 - 1;
-            this.id2 = socks.length - ((this.no_txn - 3) / 3) * 2 - 2;
-            if (this.id1 <= 0) {
-                this.id1 = socks.length - 1;
-                this.id2 = socks.length - 2;
-                this.no_txn = 4;
+        } else { //this is stage 1
+            if(this.txn || this.pair_offer == 0) {
+                this.median = getMedianSock();
             }
-            //if the pair is good enough, pick other pairs
-            while (this.t_counter < 200 && socks[this.id1].distance(socks[this.id2]) < getEmbarassment(socks) / n) {
-                this.no_txn += 3;
-                this.id1 = socks.length - ((this.no_txn - 3) / 3) * 2 - 1;
-                this.id2 = socks.length - ((this.no_txn - 3) / 3) * 2 - 2;
-                if (this.id1 <= 0) {
-                    this.id1 = socks.length - 1;
-                    this.id2 = socks.length - 2;
-                    this.no_txn = 4;
+
+            //Get the farthest 2 socks
+            int maxid1 = socks.length - socks.length/3;
+            int maxid2 = socks.length - socks.length/3 + 1;
+            this.max_dist1 = median.distance(socks[maxid1]);
+            this.max_dist2 = median.distance(socks[maxid2]);
+
+            if(this.max_dist1 < this.max_dist2) {
+                double tmp = this.max_dist2;
+                this.max_dist2 = this.max_dist1;
+                this.max_dist1 = tmp;
+                maxid1 = socks.length - socks.length/3 + 1;
+                maxid2 = socks.length - socks.length/3;
+            }
+
+            for(int i = socks.length - socks.length/3 + 2; i < socks.length; i++) {
+                boolean interest = (lastOffers.get(id).getFirst() != socks[i] && lastOffers.get(id).getSecond() != socks[i]) || lastUnfulfilledRequests.containsKey(socks[i]);
+                if (median.distance(socks[i]) > this.max_dist1 && interest) {
+                    this.max_dist2 = this.max_dist1;
+                    this.max_dist1 = median.distance(socks[i]);
+                    maxid2 = maxid1;
+                    maxid1 = i;
+                } else if (median.distance(socks[i]) > this.max_dist2 && interest) {
+                    this.max_dist2 = median.distance(socks[i]);
+                    maxid2 = i;
                 }
             }
 
+            this.id1 = maxid1;
+            this.id2 = maxid2;
+
             this.pair_offer = 1; // this is stage 1
-            return new Offer(socks[this.id1], socks[this.id2]);
         }
-        //return null;
+
+        this.txn = false;
+        return new Offer(socks[this.id1], socks[this.id2]);
     }
 
     @Override
@@ -170,123 +260,85 @@ public class Player extends exchange.sim.Player {
             offer.getSock(rank = 1, 2)      -       get rank's offer
             offer.getFirst()                -       equivalent to offer.getSock(1)
             offer.getSecond()               -       equivalent to offer.getSock(2)
-
             Remark: For Request object, rank ranges between 1 and 2
          */
 
+        lastOffers = offers;
+
         int c = 0;
-        double min_dist1 = 450;
-        double min_dist2 = 450;
+        double min_dist1 = this.max_dist1;
+        double min_dist2 = this.max_dist2;
         int min1 = -1;
         int min2 = -1;
         int rank1 = -1;
         int rank2 = -1;
-        if (this.pair_offer == 0) { //if stage 0
-            for (int j = 0; j < this.median_list.size(); ++j) {
-                for (int i = 0; i < offers.size(); i++) {
-                    if (i == id) continue; //skip the current player's offer
-                    if (offers.get(i).getFirst() != null) {
-                        if (offers.get(i).getFirst().distance(this.median_list.get(j)) < min_dist1) {
-                            min_dist2 = min_dist1;
-                            min_dist1 = offers.get(i).getFirst().distance(this.median_list.get(j));
-                            min2 = min1;
-                            min1 = i;
-                            rank2 = rank1;
-                            rank1 = 1;
-                        } else if (offers.get(i).getFirst().distance(this.median_list.get(j)) < min_dist2) {
-                            min_dist2 = offers.get(i).getFirst().distance(this.median_list.get(j));
-                            min2 = i;
-                            rank2 = 1;
-                        }
-                    }
-                    if (offers.get(i).getSecond() != null) {
-                        if (offers.get(i).getSecond().distance(this.median_list.get(j)) < min_dist1) {
-                            min_dist2 = min_dist1;
-                            min_dist1 = offers.get(i).getSecond().distance(this.median_list.get(j));
-                            min2 = min1;
-                            min1 = i;
-                            rank2 = rank1;
-                            rank1 = 2;
-                        } else if (offers.get(i).getSecond().distance(this.median_list.get(j)) < min_dist2) {
-                            min_dist2 = offers.get(i).getSecond().distance(this.median_list.get(j));
-                            min2 = i;
-                            rank2 = 2;
-                        }
-                    }
-                }
-            }
-            if (min_dist1 < this.max_dist2) {
-                c += 1;
-            }
-            if (min_dist2 < this.max_dist2) {
-                c += 1;
+        //Sock mean = getMeanSock();
+        double curMin1 = this.embarrassment;
+        double curMin2 = curMin1;
+        for (int i = 0; i < offers.size(); i++) {
+            if (i == id) continue;
+
+            // Find averge resulting embarassement
+            //double firstEmbarassment = (updatedEmbarassment(offers.get(i).getFirst(), id1) + updatedEmbarassment(offers.get(i).getFirst(), id2))/2;
+            //double secondEmbarassment = (updatedEmbarassment(offers.get(i).getSecond(), id1) + updatedEmbarassment(offers.get(i).getSecond(), id2))/2;
+
+            double firstEmbarassment = minDistance(offers.get(i).getFirst());
+            double secondEmbarassment = minDistance(offers.get(i).getSecond());
+
+            if(curMin1 > firstEmbarassment) {//&& min1 != playerCloseToOffer) {
+                curMin2 = curMin1;
+                curMin1 = firstEmbarassment;
+                min2 = min1;
+                min1 = i;
+                rank2 = rank1;
+                rank1 = 1;
+                c++;
+            } else if(curMin2 > firstEmbarassment) {//&& min2 != playerCloseToOffer) {
+                curMin2 = firstEmbarassment;
+                min2 = i;
+                rank2 = 1;
+                c++;
             }
 
-        } else {
-            for (int i = 0; i < offers.size(); i++) {
-                if (i == id) continue;
-                double firstEmbarassmentOne = -1;
-                double secondEmbarassmentOne = -1;
-                if (offers.get(i).getFirst() != null) {
-                    firstEmbarassmentOne = updatedEmbarassment(offers.get(i).getFirst(), id1);
-                }
-                if (offers.get(i).getSecond() != null) {
-                    secondEmbarassmentOne = updatedEmbarassment(offers.get(i).getSecond(), id1);
-                }
-                //double firstEmbarassmentTwo = updatedEmbarassment(offers.get(i).getFirst(), id2);
-                //double secondEmbarassmentTwo = updatedEmbarassment(offers.get(i).getSecond(), id2);
-
-
-                double curMin1 = getEmbarassment(socks);
-                double curMin2 = getEmbarassment(socks);
-                if (offers.get(i).getFirst() != null) {
-                    if (curMin1 > firstEmbarassmentOne) {
-                        curMin2 = curMin1;
-                        curMin1 = firstEmbarassmentOne;
-                        min2 = min1;
-                        min1 = i;
-                        rank2 = rank1;
-                        rank1 = 1;
-                        c++;
-                    } else if (curMin2 > firstEmbarassmentOne) {
-                        min_dist2 = firstEmbarassmentOne;
-                        min2 = i;
-                        rank2 = 1;
-                        c++;
-                    }
-                }
-                if (offers.get(i).getSecond() != null) {
-                    if (curMin1 > secondEmbarassmentOne) {
-                        curMin2 = curMin1;
-                        curMin1 = secondEmbarassmentOne;
-                        min2 = min1;
-                        min1 = i;
-                        rank2 = rank1;
-                        rank1 = 1;
-                        c++;
-                    } else if (curMin2 > secondEmbarassmentOne) {
-                        curMin2 = secondEmbarassmentOne;
-                        min2 = i;
-                        rank2 = 1;
-                        c++;
-                    }
-                }
+            if(curMin1 > secondEmbarassment) {//&& min1 != playerCloseToOffer) {
+                curMin2 = curMin1;
+                curMin1 = secondEmbarassment;
+                min2 = min1;
+                min1 = i;
+                rank2 = rank1;
+                rank1 = 2;
+                c++;
+            } else if(curMin2 > secondEmbarassment) {// && min2 != playerCloseToOffer) {
+                curMin2 = secondEmbarassment;
+                min2 = i;
+                rank2 = 2;
+                c++;
             }
+
+        }
+
+        if(min2 == playerCloseToOffer && min1 != min2) {
+            min2 = min1;
+            min1 = playerCloseToOffer;
+            int tmp = rank1;
+            rank1 = rank2;
+            rank2 = tmp;
         }
 
         //form the request
-        if (c >= 2) {
-            return new Request(min1, rank1, min2, rank2);
-        } else if (c == 1) {
-            if (min1 == -1) {
-                return new Request(min2, rank2, -1, -1);
-            } else {
-                return new Request(min1, rank1, -1, -1);
-            }
-        } else {
-            return new Request(-1, -1, -1, -1);
+        return new Request(min1, rank1 , min2, rank2);
+    }
+
+    private double minDistance(Sock s) {
+        double minDistance = 1000;
+        if(s == null) return minDistance;
+
+        for(int i = 0; i < socks.length; i += 2) {
+            if(i == this.id1 || i == this.id2) continue;
+            minDistance = Math.min(minDistance, Math.min(s.distance(socks[i]), s.distance(socks[i+1])));
         }
 
+        return minDistance;
     }
 
     @Override
@@ -298,7 +350,6 @@ public class Player extends exchange.sim.Player {
             transaction.getSecondRank()     -       Similar as above
             transaction.getFirstSock()      -       Sock offered by the first player
             transaction.getSecondSock()     -       Similar as above
-
             Remark: rank ranges between 1 and 2
          */
 
@@ -318,45 +369,69 @@ public class Player extends exchange.sim.Player {
             rank = transaction.getSecondRank();
             newSock = transaction.getFirstSock();
         }
-        if (rank == 1) socks[id1] = newSock;
-        else socks[id2] = newSock;
 
+        if (rank == 1) {
+            socks[id1] = newSock;
+        } else {
+            socks[id2] = newSock;
+        }
     }
 
     @Override
     public List<Sock> getSocks() {
-        //return result;
-        // for(int i = 0; i < socks.length; i++) {
-        //     System.out.println(socks[i]);
-        // }
+        if(t == 0) {
+            pairSocks();
+        }
+
         return Arrays.asList(socks);
     }
 
-    public Sock[] pairSocks(Sock[] s) {
+
+    private void pairSocks() {
+        if(this.n < 300) {
+            this.pairSocksBlossom();
+        } else {
+            this.pairSocksGreedy();
+        }
+    }
+
+
+    public void pairSocksBlossom() {
+        int[] match = new Blossom(getCostMatrix(socks), true).maxWeightMatching();
+        for (int i = 0, k = 0; i < match.length; i++) {
+            if(i > match[i]) continue;
+            pairs[k++] = new Pair(socks[i], socks[match[i]]);
+        }
+
+        Arrays.sort(pairs);
+        for(int j = 0; j < pairs.length; j++) {
+            socks[2*j] = pairs[j].u;
+            socks[2*j + 1] = pairs[j].v;
+        }
+    }
+
+    public double getOptimalEmbarassment(Sock[] s) {
         int[] match = new Blossom(getCostMatrix(s), true).maxWeightMatching();
         List<Pair> pairs = new LinkedList<Pair>();
         List<Sock> result = new ArrayList<Sock>();
-        for (int i = 0; i < match.length; i++) {
+        for (int i=0; i < match.length; i++) {
             if (match[i] < i) continue;
             pairs.add(new Pair(s[i], s[match[i]]));
         }
 
-        Pair[] pairArr = pairs.toArray(new Pair[n]);
-
-        Arrays.sort(pairArr);
-        for (int i = 0; i < n; i++) {
-            result.add(pairArr[i].u);
-            result.add(pairArr[i].v);
+        double embarassment = 0;
+        for(Pair p : pairs) {
+            embarassment += p.weight();
         }
 
-        return result.toArray(new Sock[2 * n]);
+        return embarassment;
     }
 
-    public Sock getMedianSock(ArrayList<Sock> input) {
+    public Sock getMedianSock() {
         List<Integer> sock_R = new ArrayList<Integer>();
         List<Integer> sock_G = new ArrayList<Integer>();
         List<Integer> sock_B = new ArrayList<Integer>();
-        for (Sock s : input) {
+        for (Sock s : socks){
             sock_R.add(s.R);
             sock_G.add(s.G);
             sock_B.add(s.B);
@@ -366,19 +441,19 @@ public class Player extends exchange.sim.Player {
         Collections.sort(sock_G);
         Collections.sort(sock_B);
 
-        int mid_R = sock_R.get(input.size() / 2);
-        int mid_G = sock_G.get(input.size() / 2);
-        int mid_B = sock_B.get(input.size() / 2);
+        int mid_R = sock_R.get(n/2);
+        int mid_G = sock_G.get(n/2);
+        int mid_B = sock_B.get(n/2);
 
         return new Sock(mid_R, mid_G, mid_B);
     }
 
     private float[][] getCostMatrix(Sock[] s) {
-        float[][] matrix = new float[s.length * (s.length - 1) / 2][3];
+        float[][] matrix = new float[s.length*(s.length-1)/2][3];
         int idx = 0;
         for (int i = 0; i < s.length; i++) {
-            for (int j = i + 1; j < s.length; j++) {
-                matrix[idx] = new float[]{i, j, (float) (-s[i].distance(s[j]))};
+            for (int j=i+1; j< s.length; j++) {
+                matrix[idx] = new float[]{i, j, (float)(-s[i].distance(s[j]))};
                 idx++;
             }
         }
@@ -386,11 +461,23 @@ public class Player extends exchange.sim.Player {
     }
 
     private double updatedEmbarassment(Sock newSock, int replaceIndex) {
-        Sock[] copy = socks.clone();
-        copy[replaceIndex] = newSock;
-        copy = pairSocks(copy);
-        return getEmbarassment(copy);
+        if(newSock == null) return -1;
+        int startIndex = Math.min(socks.length - 20, replaceIndex % 2 == 0 ? replaceIndex : replaceIndex - 1);
+        startIndex = Math.max(startIndex, 0);
+        int offset = replaceIndex % 2 == 0 ? 0 : 1;
+        Sock[] bottom = new Sock[socks.length - startIndex];
+        for(int i = 0; i < bottom.length; i++) {
+            if(startIndex + i == replaceIndex) {
+                bottom[i] = newSock;
+            } else {
+                bottom[i] = socks[startIndex + i];
+            }
+        }
+
+        return getOptimalEmbarassment(bottom);
     }
+
+
 
     private double getEmbarassment(Sock[] s) {
         double result = 0;
@@ -401,39 +488,59 @@ public class Player extends exchange.sim.Player {
         return result;
     }
 
-    public void pairSocksGreedy() {
-        List<Sock> next = new ArrayList<Sock>();
-        for (int i = 0; i < socks.length; ++i) {
-            next.add(new Sock(socks[i].R, socks[i].G, socks[i].B));
-        }
-
-        int c = 0;
-        ArrayList<Point> tmp_list = new ArrayList<Point>();
-        for (int i = 0; i < next.size(); ++i) {
-            tmp_list.add(new Point(next.get(i).R, next.get(i).G, next.get(i).B));
-        }
-
-        while (c < socks.length - 1) {
-            ClosestPair closep = new ClosestPair(tmp_list);
-            closep.SolveByDivideAndConquer();
-            Sock s1 = new Sock(closep.p1.x, closep.p1.y, closep.p1.z);
-            // System.out.println("C is: " + c);
-            socks[c] = s1;
-            c += 1;
-            Sock s2 = new Sock(closep.p2.x, closep.p2.y, closep.p2.z);
-            socks[c] = s2;
-            c += 1;
-            ArrayList<Point> tmp_1 = new ArrayList<Point>();
-            for (int i = 0; i < tmp_list.size(); ++i) {
-                if (tmp_list.get(i).x == closep.p1.x && tmp_list.get(i).y == closep.p1.y && tmp_list.get(i).z == closep.p1.z)
-                    continue;
-                if (tmp_list.get(i).x == closep.p2.x && tmp_list.get(i).y == closep.p2.y && tmp_list.get(i).z == closep.p2.z)
-                    continue;
-                tmp_1.add(new Point(tmp_list.get(i).x, tmp_list.get(i).y, tmp_list.get(i).z));
-            }
-            tmp_list = tmp_1;
-
+    private void shuffleSocks() {
+        Random r = new Random();
+        for(int i = 0; i < socks.length; i++) {
+            int j = r.nextInt(socks.length - i) + i;
+            Sock tmp = socks[i];
+            socks[i] = socks[j];
+            socks[j] = tmp;
         }
     }
 
+    private void sortPairs() {
+        for (int i = 0; i < socks.length; i += 2) {
+            pairs[i/2] = new Pair(socks[i], socks[i+1]);
+        }
+
+        Arrays.sort(pairs);
+        for(int j = 0; j < pairs.length; j++) {
+            socks[2*j] = pairs[j].u;
+            socks[2*j + 1] = pairs[j].v;
+        }
+    }
+
+    public void pairSocksGreedyShuffle() {
+        int[] tmp;
+        for(int i = 0; i < 3; i++) {
+            shuffleSocks();
+        }
+    }
+
+    public void pairSocksGreedy() {
+        boolean[] paired = new boolean[socks.length];
+        for(int i = 0; i < socks.length; i++) {
+            if(paired[i]) {
+                continue;
+            }
+            int curNeighbor = -1;
+            double curMinDist = Double.MAX_VALUE;
+            for(int j = i+1; j < socks.length; j++) {
+                if(!paired[j] && socks[i].distance(socks[j]) < curMinDist) {
+                    curNeighbor = j;
+                    curMinDist = socks[i].distance(socks[j]);
+                }
+            }
+
+            paired[i] = true;
+            paired[i+1] = true;
+  
+            Sock tmp = socks[i+1];
+            socks[i+1] = socks[curNeighbor];
+            socks[curNeighbor] = tmp;
+            i++;
+        }
+
+        sortPairs();
+    }
 }

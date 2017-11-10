@@ -96,63 +96,87 @@ public class Player extends exchange.sim.Player {
          */
         
         List<Integer> availableOffers = new ArrayList<>();
-        for (int i = 0; i < offers.size(); ++i) {
+        for (int i = 0; i < offers.size(); i++) {
             if (i == id) continue;
 
+            // Encoding the offer information into integer: id * 2 + rank - 1
             if (offers.get(i).getFirst() != null)
                 availableOffers.add(i * 2);
             if (offers.get(i).getSecond() != null)
                 availableOffers.add(i * 2 + 1);
         }
-
-        if (socks.length > 800) {
-            if (availableOffers.size() == 0) {
-                return new Request(-1, -1, -1, -1);
-            }
-            else if (availableOffers.size() == 1) {
-                int k = availableOffers.get(random.nextInt(availableOffers.size()));
-                return new Request(k / 2, k % 2 + 1, -1, -1);
-            }
-            else {
-                int k1 = availableOffers.get(random.nextInt(availableOffers.size()));
-                int k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-                while (k1 == k2)
-                    k2 = availableOffers.get(random.nextInt(availableOffers.size()));
-                return new Request(k1 / 2, k1 % 2 + 1, k2 / 2, k2 % 2 + 1);
-            }
-        }
-        
-        /*if (socks.length > 1000) {
-            this.trader.updateInformation(toArrayList(socks));
-            this.lastOffers = offers;
-            return trader.requestExchange(offers);
-        }*/
-        
         if (availableOffers.size() == 0)
             return new Request(-1, -1, -1, -1);
+        
         int[] expect;
         expect = new int[2];
-        if (current == 0) {
-            for (int i = 0; i < 2; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 6]);
+        
+        if (socks.length > 800) {
+            int bias = ((current + 3) % 4) * 2;
+            if (availableOffers.size() == 1) {
+                int k = availableOffers.get(random.nextInt(availableOffers.size()));
+                int k1 = k / 2;
+                int k2 = k % 2 + 1;
+                Sock sock0;
+                if (k2 == 1) {
+                    sock0 = offers.get(k1).getFirst();
+                }
+                else {
+                    sock0 = offers.get(k1).getSecond();
+                }
+                double t1 = picky(k, sock0, trader.sock_id[bias]);
+                double t2 = picky(k, sock0, trader.sock_id[bias + 1]);
+                if ((t1 > 0) || (t2 > 0)) expect[0] = k;
+                else expect[0] = -1;
+                expect[1] = -1;
             }
-        }
-        else if (current == 1) {
-            for (int i = 0; i < 2; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i]);
-            }
-        }
-        else if (current == 2) {
-            for (int i = 0; i < 2; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 2]);
+            else {
+                int kk[];
+                kk = new int[2];
+                kk[0] = availableOffers.get(random.nextInt(availableOffers.size()));
+                kk[1] = availableOffers.get(random.nextInt(availableOffers.size()));
+                while (kk[0] == kk[1])
+                    kk[1] = availableOffers.get(random.nextInt(availableOffers.size()));
+                for (int i = 0; i < 2; i++) {
+                    int k1 = kk[i] / 2;
+                    int k2 = kk[i] % 2 + 1;
+                    Sock sock0;
+                    if (k2 == 1) {
+                        sock0 = offers.get(k1).getFirst();
+                    }
+                    else {
+                        sock0 = offers.get(k1).getSecond();
+                    }
+                    double t1 = picky(kk[i], sock0, trader.sock_id[bias]);
+                    double t2 = picky(kk[i], sock0, trader.sock_id[bias + 1]);
+                    if ((t1 > 0) || (t2 > 0)) expect[i] = kk[i];
+                    else expect[i] = -1;
+                }
             }
         }
         else {
-            for (int i = 0; i < 2; i++) {
-                expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 4]);
+            if (current == 0) {
+                for (int i = 0; i < 2; i++) {
+                    expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 6]);
+                }
+            }
+            else if (current == 1) {
+                for (int i = 0; i < 2; i++) {
+                    expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i]);
+                }
+            }
+            else if (current == 2) {
+                for (int i = 0; i < 2; i++) {
+                    expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 2]);
+                }
+            }
+            else {
+                for (int i = 0; i < 2; i++) {
+                    expect[i] = chooseRequest(availableOffers, offers, trader.sock_id[i + 4]);
+                }
             }
         }
-        
+
         if (expect[0] == -1) {
             if (expect[1] == -1) {
                 return new Request(-1, -1, -1, -1);
@@ -219,16 +243,9 @@ public class Player extends exchange.sim.Player {
 
     @Override
     public List<Sock> getSocks() {
-
-        //System.out.println("Getsocks for PLayer id: " +Integer.toString(id));
-
         this.trader.updateInformation(toArrayList(socks));
         ArrayList<Sock> s = new ArrayList(Arrays.asList(this.socks));
         ArrayList<Sock> ans = null;
-
-        //System.out.println("Sock list original: ");
-        //System.out.println(s);
-        //System.out.println();
 
         if (socks.length > 400) {
             ans = SockHelper.getSocks(s);
@@ -236,120 +253,11 @@ public class Player extends exchange.sim.Player {
         else {
             ans = SockArrangementFinder.getSocks(s);
         }
-
-        /*System.out.println("Sock list blossomed: ");
-
-        System.out.println(ans);
-
-
-        System.out.println();
-        int minPrice = 0;
-        for (int i = 0; i < ans.size() - 1; i += 2) {
-            Sock s1 = ans.get(i);
-            Sock s2 = ans.get(i + 1);
-
-            if(!s.contains(ans.get(i)) || !s.contains(ans.get(i+1)))
-            {
-              System.out.println("WTF at " + Integer.toString(i) + ": " + ans.get(i) + " "+ ans.get(i+1));
-            }
-            Double dist = s1.distance(s2);
-            minPrice += dist.intValue();
-        }*/
         return ans;
     }
 
-    public void K_means(int rounds) {
-        centers[0][0] = 64; centers[0][1] = 64; centers[0][2] = 64;
-        centers[1][0] = 64; centers[1][1] = 192; centers[1][2] = 192;
-        centers[2][0] = 192; centers[2][1] = 192; centers[2][2] = 64;
-        centers[3][0] = 192; centers[3][1] = 64; centers[3][2] = 192;
-        for (int k = 0; k < rounds; k++) {
-            for (int i = 0; i < socks.length; i++) {
-                double min = 1e9;
-                for (int j = 0; j < 4; j++) {
-                    double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
-                            Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
-                    if (dist < min) {
-                        min = dist;
-                        clusters[i] = j;
-                    }
-                }
-            }
-            double[][] new_centers;
-            int[] count;
-            new_centers = new double[4][3];
-            count = new int[4];
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 3; j++) {
-                    new_centers[i][j] = 0;
-                }
-                count[i] = 0;
-            }
-            for (int i = 0; i < socks.length; i++) {
-                int t = clusters[i];
-                count[t]++;
-                new_centers[t][0] += socks[i].R;
-                new_centers[t][1] += socks[i].G;
-                new_centers[t][2] += socks[i].B;
-            }
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 3; j++) {
-                    centers[i][j] = new_centers[i][j] / count[i];
-                }
-            }
-        }
-    }
-
-    public void chooseOffer() {
-        double[] maxFirst;
-        double[] maxSecond;
-        double[] maxThird;
-        int[] markSecond;
-        int[] markThird;
-        maxFirst = new double[4];
-        maxSecond = new double[4];
-        maxThird = new double[4];
-        markSecond = new int[4];
-        markThird = new int[4];
-        for (int i = 0; i < socks.length; i++) {
-            int j = clusters[i];
-            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
-                    Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
-            if (dist > maxFirst[j]) {
-                maxFirst[j] = dist;
-            }
-        }
-        for (int i = 0; i < socks.length; i++) {
-            int j = clusters[i];
-            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
-                    Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
-            if ((dist > maxSecond[j]) && (dist < maxFirst[j])) {
-                maxSecond[j] = dist;
-                markSecond[j] = i;
-            }
-        }
-        for (int i = 0; i < socks.length; i++) {
-            int j = clusters[i];
-            double dist = Math.sqrt(Math.pow(socks[i].R - centers[j][0], 2) +
-                    Math.pow(socks[i].G - centers[j][1], 2) + Math.pow(socks[i].B - centers[j][2], 2));
-            if ((dist > maxThird[j]) && (dist < maxSecond[j])) {
-                maxThird[j] = dist;
-                markThird[j] = i;
-            }
-        }
-        id_offer[0] = markSecond[0]; id_offer[1] = markSecond[1];
-        id_offer[2] = markSecond[2]; id_offer[3] = markSecond[3];
-        id_offer[4] = markThird[0]; id_offer[5] = markThird[1];
-        id_offer[6] = markThird[2]; id_offer[7] = markThird[3];
-        maxDist[0] = maxSecond[0]; maxDist[1] = maxSecond[1];
-        maxDist[2] = maxSecond[2]; maxDist[3] = maxSecond[3];
-        maxDist[4] = maxThird[0]; maxDist[5] = maxThird[1];
-        maxDist[6] = maxThird[2]; maxDist[7] = maxThird[3];
-    }
-
-    public ArrayList<Sock> toArrayList(Sock[] socks)
-    {
-      return new ArrayList<Sock>(Arrays.asList(socks));
+    public ArrayList<Sock> toArrayList(Sock[] socks) {
+        return new ArrayList<Sock>(Arrays.asList(socks));
     }
     
     public int chooseRequest(List<Integer> availableOffers, List<Offer> offers, int identity) {
@@ -359,13 +267,11 @@ public class Player extends exchange.sim.Player {
         Sock[] expected;
         expected = new Sock[socks.length];
         Sock s1, s2;
-        double minPrice = 0;
         for (int i = 0; i < socks.length - 1; i += 2) {
             s1 = socks[i];
             s2 = socks[i + 1];
             expected[i] = s1;
             expected[i + 1] = s2;
-            minPrice += s1.distance(s2);
         }
         for (int i = 0; i < n; i++) {
             int k = availableOffers.get(i);
@@ -382,13 +288,18 @@ public class Player extends exchange.sim.Player {
             double temp = 0;
             ArrayList<Sock> s = new ArrayList(Arrays.asList(expected));
             ArrayList<Sock> ans = null;
-            ans = SockHelper.getSocks(s);
+            if (socks.length > 30) {
+                ans = SockHelper.getSocks(s);
+            }
+            else {
+                ans = SockArrangementFinder.getSocks(s);
+            }
             for (int j = 0; j < ans.size() - 1; j += 2) {
                 s1 = ans.get(j);
                 s2 = ans.get(j + 1);
                 temp += s1.distance(s2);
             }
-            if ((temp < min) && (temp < minPrice)) {
+            if (temp < min) {
                 min = temp;
                 mark = k;
             }
@@ -397,5 +308,39 @@ public class Player extends exchange.sim.Player {
             return mark;
         }
         else return -1;
+    }
+    
+    public double picky(int k, Sock sock0, int identity) {
+        Sock[] expected;
+        expected = new Sock[socks.length];
+        Sock s1, s2;
+        for (int i = 0; i < socks.length - 1; i += 2) {
+            s1 = socks[i];
+            s2 = socks[i + 1];
+            expected[i] = s1;
+            expected[i + 1] = s2;
+        }
+        double minPrice = 0;
+        ArrayList<Sock> s = new ArrayList(Arrays.asList(socks));
+        ArrayList<Sock> ans = null;
+        ans = SockHelper.getSocks(s);
+        for (int j = 0; j < ans.size() - 1; j += 2) {
+            s1 = ans.get(j);
+            s2 = ans.get(j + 1);
+            minPrice += s1.distance(s2);
+        }
+        expected[identity] = sock0;
+        double temp = 0;
+        ArrayList<Sock> ss = new ArrayList(Arrays.asList(expected));
+        ans = SockHelper.getSocks(ss);
+        for (int j = 0; j < ans.size() - 1; j += 2) {
+            s1 = ans.get(j);
+            s2 = ans.get(j + 1);
+            temp += s1.distance(s2);
+        }
+        if (temp < minPrice) {
+            return temp;
+        }
+        return -1;
     }
 }

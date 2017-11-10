@@ -7,7 +7,7 @@ $ javac exchange/sim/*.java
 ```
 Then run simulator for fun! For example:
 ```sh
-java exchange.sim.Simulator -p g4 g4 g4 --gui --fps 1
+java exchange.sim.Simulator -p g0 g0 g0 --gui --fps 1
 ```
 | Parameters | Meanings |
 | ------ | ------ |

@@ -1,6 +1,6 @@
 /* Converted to Java from Python by Matt Krick. Original: http://jorisvr.nl/maximummatching.html */
 // Javascript reference: https://github.com/mattkrick/EdmondsBlossom
-package exchange.g6;
+package exchange.g3;
 
 import java.util.Arrays;
 import java.util.ArrayList;
